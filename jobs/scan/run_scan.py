@@ -157,7 +157,7 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("workspace_name"),
             S("overall_score", DoubleType()), S("level", LongType()), S("level_label"),
             S("readiness_stage"), S("guidance"), S("top_gaps_json"),
-            S("pillars_available", LongType()), S("assessed_at"),
+            S("pillars_available", LongType()), S("pillars_total", LongType()), S("assessed_at"),
         ]),
         "genie_readiness_pillars": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("pillar_key"), S("name"),
