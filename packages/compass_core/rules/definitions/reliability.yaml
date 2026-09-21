@@ -1,0 +1,20 @@
+rules:
+  - id: REL-001
+    domain: reliability
+    title: High job failure rate
+    description: >
+      A high share of job runs ending in ERROR indicates flaky or broken
+      pipelines that erode trust in the platform's data.
+    severity: high
+    level: RECOMMENDED
+    requires: [lakeflow]
+    frameworks: []
+    waf_pillars: [reliability, operational_excellence]
+    agent_explainer: >
+      Jobs are failing often. Triage the failing jobs, add retries/alerts, and
+      fix the top offenders.
+    remediation: >
+      Triage failing jobs in system.lakeflow.job_run_timeline; add retries and
+      failure alerts; fix the most frequent failures first.
+    docs:
+      - https://docs.databricks.com/jobs/monitor.html

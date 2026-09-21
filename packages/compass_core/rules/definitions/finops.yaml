@@ -1,0 +1,88 @@
+rules:
+  - id: FIN-028
+    domain: finops
+    title: Serving endpoints without spend caps
+    description: >
+      Model serving / Unity AI Gateway endpoints without a configured budget or
+      spend cap can run away in cost, especially agent traffic on frontier
+      models.
+    severity: high
+    level: RECOMMENDED
+    requires: [ai_gateway, billing]
+    frameworks: ["DBX-SBP:MON-2"]
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      Without a spend cap, a traffic spike or a runaway agent bills without a
+      ceiling. Set a budget on the endpoint and alert on approach.
+    remediation: >
+      Configure a spend cap / budget on the endpoint via Unity AI Gateway and
+      enable usage tracking so spend is attributed by user, team and use case.
+    docs:
+      - https://docs.databricks.com/ai-gateway/
+
+  - id: FIN-027
+    domain: finops
+    title: Spend without user/team/use-case attribution
+    description: >
+      Usage that cannot be attributed to a run-as identity, team or use case
+      (no owner metadata, no cost tags) makes chargeback and accountability
+      impossible and hides runaway consumers.
+    severity: high
+    level: RECOMMENDED
+    requires: [billing]
+    frameworks: ["DBX-SBP:MON-2"]
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      A large share of spend has no owner identity. Tag workloads by team and
+      use case, and prefer run-as service principals so cost is attributable.
+    remediation: >
+      Adopt a cost-tag policy (team, use_case, environment) enforced via tag
+      policies; set run-as identities on jobs and endpoints; enable Gateway
+      budgets for AI spend.
+    docs:
+      - https://docs.databricks.com/admin/account-settings/usage.html
+
+  - id: FIN-030
+    domain: finops
+    title: Genie consumption without free-allowance attribution
+    description: >
+      Genie usage driven by service principals gets no free allowance, and
+      per-user Genie consumption should be attributed and compared to the free
+      allowance to avoid surprise cost.
+    severity: medium
+    level: CONTEXT_DEPENDENT
+    requires: [billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      Genie spend is present. Confirm it is attributed to identified users
+      (who get a free allowance) rather than service principals.
+    remediation: >
+      Attribute Genie usage to named users; review SP-driven Genie traffic which
+      receives no free allowance.
+    docs:
+      - https://docs.databricks.com/genie/
+
+  - id: FIN-029
+    domain: finops
+    title: Lakebase idle projects or non-scale-to-zero compute
+    description: >
+      Lakebase projects that never scale to zero on non-production compute, or
+      idle projects still incurring cost, and snapshot storage growth or
+      lingering dev branches, leak spend.
+    severity: medium
+    level: RECOMMENDED
+    requires: [lakebase, billing]
+    frameworks: ["DBX-SBP:MON-4"]
+    waf_pillars: [cost_optimization]
+    maintenance:
+      recurrence: weekly
+      lead_days: 0
+    agent_explainer: >
+      Non-prod Lakebase compute that never scales to zero bills around the clock.
+      Enable scale-to-zero and prune idle branches and snapshots.
+    remediation: >
+      Enable scale-to-zero on non-production Lakebase compute; delete idle dev
+      branches past the max-age policy; define a snapshot retention policy.
+    docs:
+      - https://docs.databricks.com/oltp/

@@ -1,0 +1,70 @@
+pillar: performance_efficiency
+# Performance Efficiency — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/performance-efficiency/index.html
+controls:
+  - id: PE-QRY-01
+    principle: Query performance
+    title: Query latency within tolerance
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Per-identity average query latency is within tolerance.
+    rule: PERF-010
+    remediation:
+      summary: Profile slow queries; right-size warehouses; cache and cluster hot tables.
+      doc_url: https://docs.databricks.com/en/sql/admin/warehouse-monitoring.html
+
+  - id: PE-OPT-01
+    principle: Data layout
+    title: Predictive Optimization enabled
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Predictive Optimization is enabled for managed tables.
+    remediation:
+      summary: Enable Predictive Optimization so OPTIMIZE/VACUUM run automatically.
+      doc_url: https://docs.databricks.com/en/optimizations/predictive-optimization.html
+
+  - id: PE-OPT-02
+    principle: Data layout
+    title: Liquid clustering over static partitioning
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Large tables use liquid clustering rather than over-partitioning.
+    remediation:
+      summary: Adopt liquid clustering; avoid high-cardinality static partitioning.
+      doc_url: https://docs.databricks.com/en/delta/clustering.html
+
+  - id: PE-OPT-03
+    principle: Data layout
+    title: OPTIMIZE / auto-compaction and data skipping
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Tables are compacted (OPTIMIZE / optimized writes) with statistics for skipping.
+    remediation:
+      summary: Run OPTIMIZE / enable optimized writes; ANALYZE for statistics and skipping.
+      doc_url: https://docs.databricks.com/en/delta/optimize.html
+
+  - id: PE-COMP-01
+    principle: Compute performance
+    title: Photon and native operations
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Workloads use Photon and native Spark ops over Python/Scala UDFs.
+    remediation:
+      summary: Enable Photon; prefer built-in/native functions over row-wise UDFs.
+      doc_url: https://docs.databricks.com/en/compute/photon.html
+
+  - id: PE-SRV-01
+    principle: Elasticity
+    title: Serverless adoption for elastic workloads
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Elastic/interactive workloads use serverless where appropriate.
+    remediation:
+      summary: Adopt serverless SQL / jobs for elastic workloads to cut idle capacity.
+      doc_url: https://docs.databricks.com/en/serverless-compute/index.html

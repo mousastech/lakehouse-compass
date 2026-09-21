@@ -1,0 +1,142 @@
+pillar: security
+# Security, Privacy & Compliance — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/security-compliance-and-privacy/index.html
+controls:
+  - id: SCP-IAM-01
+    principle: Identity & access management
+    title: Single sign-on and automated provisioning (SSO + SCIM)
+    provenance: security-guide
+    measurability: attestation
+    severity: high
+    criteria: Workspace/account use SSO with SCIM-based user & group provisioning.
+    remediation:
+      summary: Federate identity via SSO and provision users/groups with SCIM from the IdP.
+      doc_url: https://docs.databricks.com/en/security/auth/index.html
+
+  - id: SCP-IAM-02
+    principle: Identity & access management
+    title: Least-privilege service principals
+    provenance: waf-docs
+    measurability: system_table
+    severity: high
+    criteria: No service principal holds ALL PRIVILEGES / broad ownership on a catalog.
+    rule: SEC-027
+    remediation:
+      summary: Revoke ALL PRIVILEGES; grant the minimum on specific schemas/tables.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/manage-privileges/index.html
+
+  - id: SCP-IAM-03
+    principle: Identity & access management
+    title: No broad grants to all-account-users
+    provenance: waf-docs
+    measurability: system_table
+    severity: high
+    criteria: MODIFY / ALL PRIVILEGES are not granted to the all-account-users group.
+    rule: SEC-014
+    remediation:
+      summary: Replace all-users grants with scoped group grants.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/manage-privileges/index.html
+
+  - id: SCP-IAM-04
+    principle: Identity & access management
+    title: OAuth over personal access tokens
+    provenance: security-guide
+    measurability: system_table
+    severity: medium
+    criteria: PATs are disabled or lifetime-capped where OAuth is feasible.
+    rule: SEC-029
+    remediation:
+      summary: Disable PATs or cap lifetime; migrate integrations to OAuth.
+      doc_url: https://docs.databricks.com/en/security/auth/index.html
+
+  - id: SCP-DATA-01
+    principle: Data protection
+    title: Attribute-based access with governed tags
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Sensitive data is governed with tags / ABAC policies.
+    rule: SEC-030
+    remediation:
+      summary: Apply governed tags and ABAC row filters / column masks on sensitive data.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/tags.html
+
+  - id: SCP-DATA-02
+    principle: Data protection
+    title: Row filters and column masks on sensitive tables
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: PII/sensitive columns are protected by row filters or column masks.
+    remediation:
+      summary: Add row-level filters and column masks to sensitive tables.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/row-and-column-filters.html
+
+  - id: SCP-APP-01
+    principle: Application & AI security
+    title: Serving endpoints have input/output guardrails
+    provenance: waf-docs
+    measurability: rest_api
+    severity: high
+    criteria: User-facing serving endpoints front AI Gateway guardrails.
+    rule: AIG-004
+    remediation:
+      summary: Front endpoints with Unity AI Gateway; enable guardrails and payload logging.
+      doc_url: https://docs.databricks.com/en/ai-gateway/index.html
+
+  - id: SCP-LKB-01
+    principle: Data protection
+    title: Lakebase native password authentication disabled
+    provenance: security-guide
+    measurability: rest_api
+    severity: high
+    criteria: Lakebase instances do not allow native Postgres password login.
+    rule: LKB-001
+    remediation:
+      summary: Disable native password auth; use OAuth tokens for Lakebase.
+      doc_url: https://docs.databricks.com/en/oltp/index.html
+
+  - id: SCP-LKB-02
+    principle: Identity & access management
+    title: Lakebase roles are least-privilege
+    provenance: security-guide
+    measurability: rest_api
+    severity: high
+    criteria: No Lakebase role holds SUPERUSER / CREATEROLE / CREATEDB unnecessarily.
+    rule: LKB-002
+    remediation:
+      summary: Scope Lakebase roles to least privilege; no superuser for app/agent roles.
+      doc_url: https://docs.databricks.com/en/oltp/index.html
+
+  - id: SCP-MON-01
+    principle: Compliance & monitoring
+    title: Verbose audit logging enabled
+    provenance: security-guide
+    measurability: attestation
+    severity: medium
+    criteria: Verbose audit logs are enabled and shipped to system tables / SIEM.
+    remediation:
+      summary: Enable verbose audit logging and route to system.access.audit / SIEM.
+      doc_url: https://docs.databricks.com/en/admin/account-settings/audit-logs.html
+
+  - id: SCP-NET-01
+    principle: Networking
+    title: Private connectivity and IP access lists
+    provenance: security-guide
+    measurability: attestation
+    severity: high
+    criteria: Private connectivity (PrivateLink/SCC) and IP access lists restrict access.
+    remediation:
+      summary: Enable PrivateLink / serverless egress controls and IP access lists.
+      doc_url: https://docs.databricks.com/en/security/network/index.html
+
+  - id: SCP-ENC-01
+    principle: Data protection
+    title: Customer-managed keys for encryption at rest
+    provenance: security-guide
+    measurability: attestation
+    severity: medium
+    criteria: Encryption at rest uses customer-managed keys where required.
+    remediation:
+      summary: Configure customer-managed keys (CMK) for managed services and storage.
+      doc_url: https://docs.databricks.com/en/security/keys/index.html

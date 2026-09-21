@@ -1,0 +1,82 @@
+pillar: operational_excellence
+# Operational Excellence — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/operational-excellence/index.html
+controls:
+  - id: OE-ENV-01
+    principle: Environments & isolation
+    title: Dev / staging / prod isolation
+    provenance: waf-docs
+    measurability: attestation
+    severity: high
+    criteria: Separate dev/staging/prod environments with environment-aware catalog bindings.
+    remediation:
+      summary: Isolate environments with distinct catalogs/workspaces and bindings.
+      doc_url: https://docs.databricks.com/en/lakehouse-architecture/operational-excellence/best-practices.html
+
+  - id: OE-CICD-01
+    principle: CI/CD & IaC
+    title: CI/CD with Databricks Asset Bundles / IaC
+    provenance: waf-docs
+    measurability: attestation
+    severity: high
+    criteria: Deployments use DABs / Terraform through CI/CD, not manual changes.
+    remediation:
+      summary: Standardize on DABs + CI/CD; manage infra as code.
+      doc_url: https://docs.databricks.com/en/dev-tools/bundles/index.html
+
+  - id: OE-SCM-01
+    principle: Source control
+    title: Source control via Git folders
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Notebooks/jobs are version-controlled via Git folders.
+    remediation:
+      summary: Store code in Git folders; deploy from version control.
+      doc_url: https://docs.databricks.com/en/repos/index.html
+
+  - id: OE-MON-01
+    principle: Monitoring & alerting
+    title: Monitoring, alerting and logging in place
+    provenance: waf-docs
+    measurability: attestation
+    severity: high
+    criteria: Jobs/pipelines/SQL have alerts; system-table dashboards track health.
+    remediation:
+      summary: Add SQL alerts and system-table dashboards for jobs, pipelines and spend.
+      doc_url: https://docs.databricks.com/en/sql/user/alerts/index.html
+
+  - id: OE-MLOPS-01
+    principle: MLOps
+    title: Agents/models evaluated on a cadence
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Deployed agents/models are evaluated within the configured window.
+    rule: AIG-014
+    remediation:
+      summary: Schedule MLflow evaluation on a cadence; alert on drift/regressions.
+      doc_url: https://docs.databricks.com/en/mlflow/index.html
+
+  - id: OE-JOB-01
+    principle: Orchestration
+    title: Orchestration health (job reliability)
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Orchestrated jobs run reliably (failure rate within tolerance).
+    rule: REL-001
+    remediation:
+      summary: Use Lakeflow Jobs orchestration with retries and alerting.
+      doc_url: https://docs.databricks.com/en/jobs/index.html
+
+  - id: OE-CAP-01
+    principle: Capacity & limits
+    title: Service-limit and quota management
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Service limits/quotas are tracked with capacity planning.
+    remediation:
+      summary: Monitor account/service limits; plan capacity ahead of growth.
+      doc_url: https://docs.databricks.com/en/resources/limits.html

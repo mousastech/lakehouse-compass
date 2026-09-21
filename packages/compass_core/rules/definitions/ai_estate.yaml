@@ -1,0 +1,62 @@
+rules:
+  - id: AIG-003
+    domain: ai_estate
+    title: Endpoints without budget/spend cap; unattributed AI spend above threshold
+    description: >
+      Endpoints lacking a spend cap combined with AI spend that is not
+      attributed to a user, team or use case (no Unity AI Gateway budgets) make
+      cost ungoverned and unaccountable.
+    severity: high
+    level: RECOMMENDED
+    requires: [ai_gateway, billing]
+    frameworks: ["AIGOV:BUDGET-1", "DBX-SBP:MON-2"]
+    waf_pillars: [cost_optimization, data_ai_governance]
+    agent_explainer: >
+      You cannot manage what you cannot attribute. Turn on Gateway budgets and
+      tag endpoints by team and use case, then cap spend.
+    remediation: >
+      Front the endpoint with Unity AI Gateway; enable usage tracking + payload
+      logging; set per-team budgets and a hard spend cap.
+    docs:
+      - https://docs.databricks.com/ai-gateway/
+
+  - id: AIG-014
+    domain: ai_estate
+    title: Serving endpoints owned by individuals in production workspaces
+    description: >
+      Model serving endpoints created/owned by individual users (rather than a
+      service principal or team) create key-person risk and complicate
+      governance and offboarding.
+    severity: low
+    level: CONTEXT_DEPENDENT
+    requires: [serving]
+    frameworks: ["DBX-SBP:IAM-3"]
+    waf_pillars: [operational_excellence, security]
+    agent_explainer: >
+      Endpoints owned by a person break when that person leaves. Move ownership
+      to a service principal or team.
+    remediation: >
+      Transfer endpoint ownership to a service principal or team group; review
+      CAN MANAGE grants.
+    docs:
+      - https://docs.databricks.com/machine-learning/model-serving/
+
+  - id: AIG-004
+    domain: ai_estate
+    title: User-facing endpoints without input/output guardrails
+    description: >
+      User-facing endpoints without guardrails (PII detection, prompt-injection
+      defence, content policy) expose the org to data leakage and unsafe output.
+    severity: high
+    level: REQUIRED
+    requires: [ai_gateway, serving]
+    frameworks: ["AIGOV:GUARD-1", "DBX-SBP:DATA-3"]
+    waf_pillars: [security, data_ai_governance]
+    agent_explainer: >
+      A user-facing model with no guardrails can leak PII or be prompt-injected.
+      Enable input/output guardrails on the Gateway endpoint.
+    remediation: >
+      Enable input and output guardrails (PII, prompt-injection, content policy)
+      on the Unity AI Gateway endpoint serving user-facing traffic.
+    docs:
+      - https://docs.databricks.com/ai-gateway/guardrails.html

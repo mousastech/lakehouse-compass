@@ -1,0 +1,52 @@
+framework: ai-governance-baseline
+title: AI Governance Baseline
+version: "2026.1"
+advisory: true
+description: >
+  Attribution, budgets, guardrails, tracing, tool least-privilege, MCP registry
+  and human approval on actions for the AI estate. A green control is evidence
+  that the mapped rules passed for the scanned scope — not a certification.
+categories:
+  - Attribution
+  - Budget
+  - Guardrails
+  - Governance
+  - Human Oversight
+controls:
+  - control_id: AIGOV:ATTR-1
+    category: Attribution
+    title: AI and platform spend is attributed
+    description: Usage is attributable to a user/team/use-case; Genie usage attributed to identified users.
+    rule_ids: [FIN-027, FIN-030]
+    manual: false
+  - control_id: AIGOV:BUDGET-1
+    category: Budget
+    title: Endpoints have budgets / spend caps
+    description: Serving/Gateway endpoints have spend caps and usage tracking.
+    rule_ids: [AIG-003, FIN-028]
+    manual: false
+  - control_id: AIGOV:GUARD-1
+    category: Guardrails
+    title: User-facing endpoints enforce guardrails
+    description: Input/output guardrails (PII, prompt-injection, content policy) are enabled.
+    rule_ids: [AIG-004]
+    manual: false
+  - control_id: AIGOV:GATEWAY-1
+    category: Governance
+    title: Models fronted by Unity AI Gateway
+    description: External/custom endpoints are fronted by the Gateway (usage tracking, payload logging).
+    rule_ids: [AIG-001]
+    manual: false
+  - control_id: AIGOV:OWNER-1
+    category: Governance
+    title: Endpoints owned by service principals / teams
+    description: Production endpoints are not owned by individuals.
+    rule_ids: [AIG-014]
+    manual: false
+  - control_id: AIGOV:HUMAN-1
+    category: Human Oversight
+    title: Human approval on actions
+    description: Agents propose changes; a human approves before execution (Compass ProposedChange workflow).
+    rule_ids: []
+    manual: true
+    attestation: "Compass Agent never executes; ProposedChange requires a named reviewer's approval."

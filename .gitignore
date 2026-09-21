@@ -1,0 +1,10 @@
+.DS_Store
+.databricks/
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+dist/
+client/dist/
+.env
+.pytest_cache/

@@ -1,0 +1,85 @@
+rules:
+  - id: SEC-027
+    domain: security
+    title: App/agent service principal holds MANAGE or ALL PRIVILEGES on a catalog
+    description: >
+      A service principal used by an app or agent that owns MANAGE or ALL
+      PRIVILEGES on a catalog violates least privilege: a compromise or bug can
+      read, alter or drop any object in the catalog.
+    severity: critical
+    level: REQUIRED
+    requires: [access, tags]
+    frameworks: ["DBX-SBP:IAM-3", "ISO27001:A.5.15", "SOC2:CC6.1"]
+    waf_pillars: [security, data_ai_governance]
+    maintenance: null
+    agent_explainer: >
+      This SP can act on every object in the catalog. Scope its grants to the
+      exact schemas it needs and remove catalog-level MANAGE/ALL PRIVILEGES.
+    remediation: >
+      REVOKE ALL PRIVILEGES ON CATALOG <catalog> FROM `<sp>`; then GRANT only the
+      minimum (USE CATALOG, USE SCHEMA, SELECT) on the specific schemas required.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/manage-privileges/
+
+  - id: SEC-029
+    domain: security
+    title: Workspace still allows PATs where OAuth is feasible
+    description: >
+      Personal access tokens are long-lived bearer credentials. Where OAuth /
+      service-principal OAuth is feasible, PATs should be disabled to reduce
+      credential sprawl and theft risk.
+    severity: high
+    level: CONTEXT_DEPENDENT
+    requires: [access]
+    frameworks: ["DBX-SBP:IAM-5", "CIS:1.2", "NIST-CSF:PR.AA"]
+    waf_pillars: [security]
+    agent_explainer: >
+      PATs are long-lived and hard to rotate. Prefer OAuth. If PATs are still
+      needed, cap their lifetime and inventory their owners.
+    remediation: >
+      Disable Personal Access Tokens in the workspace admin settings, or set a
+      short max lifetime, and migrate integrations to OAuth (U2M/M2M).
+    docs:
+      - https://docs.databricks.com/dev-tools/auth/
+
+  - id: SEC-014
+    domain: security
+    title: Broad privileges granted to all-account-users groups
+    description: >
+      Granting MODIFY / ALL PRIVILEGES to `account users` (or `users`) on
+      catalogs or schemas gives every workspace user write/administrative access
+      to governed data, defeating least privilege.
+    severity: critical
+    level: REQUIRED
+    requires: [tags]
+    frameworks: ["DBX-SBP:IAM-3", "CIS:1.1", "ISO27001:A.5.15"]
+    waf_pillars: [security, data_ai_governance]
+    agent_explainer: >
+      Everyone in the account can modify or fully control these objects. Replace
+      the broad group grant with scoped grants to the specific teams that need it.
+    remediation: >
+      REVOKE the broad privilege from `account users`; GRANT the minimum needed
+      to the specific groups/service principals that require it.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/manage-privileges/
+
+  - id: SEC-030
+    domain: security
+    title: ABAC tagging privileges (ASSIGN / APPLY TAG) granted broadly
+    description: >
+      Governed tags drive ABAC row-filter / column-mask policies, so the ability
+      to apply tags is a security boundary. Broad ASSIGN/APPLY TAG grants let
+      users move data in and out of protected policy scopes.
+    severity: high
+    level: REQUIRED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-1", "ISO27001:A.8.3"]
+    waf_pillars: [security, data_ai_governance]
+    agent_explainer: >
+      Whoever can apply governed tags can effectively change who sees masked
+      data. Restrict APPLY TAG to a small stewardship group.
+    remediation: >
+      Review GRANTs of APPLY TAG / ASSIGN on governed tag policies and restrict
+      to the data-governance stewardship group.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/tags.html

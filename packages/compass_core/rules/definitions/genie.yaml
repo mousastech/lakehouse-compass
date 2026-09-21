@@ -1,0 +1,42 @@
+rules:
+  - id: GEN-001
+    domain: genie
+    title: Genie Agents missing descriptions / instructions
+    description: >
+      Genie Agents without descriptions and curated instructions give the model
+      little grounding, producing lower-quality and inconsistent answers.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Agents without descriptions/instructions guess. Add a clear description,
+      instructions and certified sample questions to each Genie Agent.
+    remediation: >
+      Add descriptions, instructions and certified sample questions to each
+      Genie Agent; curate its table set.
+    docs:
+      - https://docs.databricks.com/genie/
+
+  - id: GEN-013
+    domain: genie
+    title: Genie Agents built on tables without certified metric views
+    description: >
+      Genie Agents answering on core business metrics without certified UC
+      metric views risk semantic drift and inconsistent answers versus governed
+      dashboards.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie, tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      When a Genie Agent computes core metrics ad hoc instead of from a certified
+      metric view, answers can drift from the governed definition. Point it at a
+      certified metric view.
+    remediation: >
+      Define UC metric views for the agent's core metrics, certify them, and add
+      them to the Genie Agent's table set and instructions.
+    docs:
+      - https://docs.databricks.com/genie/

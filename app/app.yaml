@@ -1,0 +1,24 @@
+# Databricks Apps entry point.
+#
+# The public npm registry is unavailable on some build machines, so the app is
+# built on the Apps compute via a self-building command: install deps if missing,
+# build client+server bundles, then start. Deploy with `databricks bundle deploy`
+# + `databricks bundle run compass_app` (NOT `databricks apps deploy`).
+command:
+  - sh
+  - -c
+  - 'if [ ! -d node_modules ]; then npm ci || npm install; fi; npm run build && npm start'
+env:
+  # SQL warehouse for the analytics plugin (reads the scan job's Delta output).
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  # Phase 1: read live Delta, fall back to bundled fixtures when a table is
+  # empty/absent. Set to "true" to force fixtures only.
+  - name: COMPASS_DEMO_MODE
+    value: "false"
+  # Catalog holding the lakehouse_compass schema.
+  - name: COMPASS_CATALOG
+    value: "moi_ai_catalog"
+  # Compass Agent — Unity AI Gateway–governed serving endpoint (bound as compass-llm).
+  - name: COMPASS_LLM_ENDPOINT
+    value: "databricks-claude-sonnet-4-5"

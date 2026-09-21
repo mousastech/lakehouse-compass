@@ -1,0 +1,88 @@
+framework: dbx-security-best-practices
+title: Databricks Security Best Practices (SAT-aligned)
+version: "2026.1"
+advisory: true
+description: >
+  Aligned with the Databricks Security Best Practices and the Security Analysis
+  Tool (SAT) categories: Identity, Network, Data Protection, Compute, Governance,
+  Monitoring. A green control is evidence that the mapped rules passed for the
+  scanned scope — it is not a certification claim.
+categories:
+  - Identity
+  - Network
+  - Data Protection
+  - Compute
+  - Governance
+  - Monitoring
+controls:
+  - control_id: DBX-SBP:IAM-3
+    category: Identity
+    title: Least-privilege service principals
+    description: App/agent SPs and broad groups do not hold catalog-wide MANAGE or ALL PRIVILEGES.
+    rule_ids: [SEC-027, SEC-014, LKB-002]
+    manual: false
+
+  - control_id: DBX-SBP:IAM-5
+    category: Identity
+    title: Prefer OAuth over PATs
+    description: Personal access tokens are disabled or short-lived where OAuth is feasible.
+    rule_ids: [SEC-029]
+    manual: false
+
+  - control_id: DBX-SBP:IAM-7
+    category: Identity
+    title: No native database password auth
+    description: Lakebase projects use OAuth token auth, not native Postgres passwords.
+    rule_ids: [LKB-001]
+    manual: false
+
+  - control_id: DBX-SBP:GOV-1
+    category: Governance
+    title: Tagging is a controlled security boundary
+    description: ABAC tagging privileges (APPLY TAG / ASSIGN) are restricted to stewards.
+    rule_ids: [SEC-030]
+    manual: false
+
+  - control_id: DBX-SBP:GOV-2
+    category: Governance
+    title: Certified semantics for analytics and Genie
+    description: Core metrics used by Genie/dashboards come from certified UC metric views.
+    rule_ids: [GEN-013]
+    manual: false
+
+  - control_id: DBX-SBP:DATA-3
+    category: Data Protection
+    title: Guardrails on user-facing AI
+    description: User-facing model endpoints enforce input/output guardrails.
+    rule_ids: [AIG-004]
+    manual: false
+
+  - control_id: DBX-SBP:MON-2
+    category: Monitoring
+    title: AI spend is attributed and capped
+    description: Serving/Gateway endpoints have budgets, spend caps and usage tracking; spend is attributed.
+    rule_ids: [FIN-028, AIG-003, FIN-027]
+    manual: false
+
+  - control_id: DBX-SBP:MON-4
+    category: Monitoring
+    title: Cost hygiene on elastic resources
+    description: Non-production Lakebase compute scales to zero; idle resources are pruned.
+    rule_ids: [FIN-029]
+    manual: false
+
+  - control_id: DBX-SBP:NET-1
+    category: Network
+    title: Private connectivity and IP access lists
+    description: Workspace uses IP access lists / private connectivity for admin surfaces.
+    rule_ids: []
+    manual: true
+    attestation: "Reviewed workspace network configuration and confirmed IP access lists / PrivateLink."
+
+  - control_id: DBX-SBP:CMP-1
+    category: Compute
+    title: Supported runtimes and hardened compute
+    description: Clusters/jobs run supported DBR versions with hardened access mode.
+    rule_ids: []
+    manual: true
+    attestation: "Confirmed clusters use supported runtimes and shared/single-user access mode."

@@ -1,0 +1,42 @@
+bundle:
+  name: lakehouse-compass
+
+# Lakehouse Compass — the Databricks platform doctor.
+# Phase 0: deployable AppKit shell in DEMO_MODE + compass_core rule engine
+# skeleton + a demo scan job. See DECISIONS.md for phasing.
+
+include:
+  - resources/*.yml
+
+variables:
+  sql_warehouse_id:
+    description: SQL Warehouse the app uses to read moi_ai_catalog.lakehouse_compass.* Delta.
+    default: 4e6fdb0b5307a9f1
+  compass_catalog:
+    description: Catalog holding the lakehouse_compass schema (main is not accessible in this workspace).
+    default: moi_ai_catalog
+
+targets:
+  # dev is the default target for Phase 0 work.
+  dev:
+    default: true
+    mode: development
+    workspace:
+      host: https://fevm-moi-ai.cloud.databricks.com
+      # Per-user root so multiple developers never collide.
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+
+  staging:
+    mode: development
+    workspace:
+      host: https://fevm-moi-ai.cloud.databricks.com
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+
+  prod:
+    mode: production
+    workspace:
+      host: https://fevm-moi-ai.cloud.databricks.com
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - level: CAN_MANAGE
+        user_name: ${workspace.current_user.userName}

@@ -1,0 +1,70 @@
+pillar: reliability
+# Reliability — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/reliability/index.html
+controls:
+  - id: REL-JOB-01
+    principle: Design for failure
+    title: Job failure rate within tolerance
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Job/pipeline run failure rate is within the configured tolerance.
+    rule: REL-001
+    remediation:
+      summary: Investigate failing jobs; add alerting on failure-rate spikes.
+      doc_url: https://docs.databricks.com/en/jobs/index.html
+
+  - id: REL-JOB-02
+    principle: Design for failure
+    title: Retry and timeout policies on jobs
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Jobs declare retries, timeouts and repair-run strategy.
+    remediation:
+      summary: Configure retries, timeouts and repair runs on production jobs.
+      doc_url: https://docs.databricks.com/en/jobs/settings.html
+
+  - id: REL-DATA-01
+    principle: Data reliability
+    title: Medallion with schema enforcement / expectations
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Pipelines enforce schema and expectations across medallion layers.
+    remediation:
+      summary: Use DLT/Lakeflow expectations and schema enforcement.
+      doc_url: https://docs.databricks.com/en/delta-live-tables/expectations.html
+
+  - id: REL-STR-01
+    principle: Streaming reliability
+    title: Streaming checkpoints configured
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Structured Streaming workloads use durable checkpoints.
+    remediation:
+      summary: Configure checkpoint locations; use AvailableNow for triggered streaming.
+      doc_url: https://docs.databricks.com/en/structured-streaming/index.html
+
+  - id: REL-REC-01
+    principle: Recovery
+    title: Time travel / RESTORE recovery
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Delta time travel / RESTORE is used for point-in-time recovery.
+    remediation:
+      summary: Rely on Delta time travel and RESTORE; document recovery procedures.
+      doc_url: https://docs.databricks.com/en/delta/history.html
+
+  - id: REL-DR-01
+    principle: Disaster recovery
+    title: DR with defined and tested RTO/RPO
+    provenance: waf-docs
+    measurability: attestation
+    severity: high
+    criteria: A DR plan with defined, tested RTO/RPO covers metadata + table replication.
+    remediation:
+      summary: Define and test a DR plan (RTO/RPO) with metadata and table replication.
+      doc_url: https://docs.databricks.com/en/admin/disaster-recovery.html

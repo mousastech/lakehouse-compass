@@ -1,0 +1,60 @@
+rules:
+  - id: LKB-001
+    domain: lakebase
+    title: Native password authentication enabled on a Lakebase project
+    description: >
+      Native Postgres password auth on a Lakebase project bypasses OAuth token
+      rotation and centralized identity, and creates a long-lived credential.
+    severity: high
+    level: REQUIRED
+    requires: [lakebase]
+    frameworks: ["DBX-SBP:IAM-7", "SOC2:CC6.1"]
+    waf_pillars: [security]
+    agent_explainer: >
+      Native password auth is a long-lived secret outside your identity plane.
+      Disable it and use OAuth tokens rotated by the connection pool.
+    remediation: >
+      Disable native password authentication on the Lakebase project; connect
+      apps via OAuth with tokens rotated by the AppKit Lakebase pool.
+    docs:
+      - https://docs.databricks.com/oltp/
+
+  - id: LKB-003
+    domain: lakebase
+    title: Lakebase projects without scale-to-zero on non-production compute
+    description: >
+      Non-production Lakebase compute that does not scale to zero bills around
+      the clock; idle running instances leak cost.
+    severity: low
+    level: RECOMMENDED
+    requires: [lakebase_instances]
+    frameworks: ["DBX-SBP:MON-4"]
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      Running non-prod Lakebase compute bills continuously. Enable scale-to-zero
+      and stop idle instances.
+    remediation: >
+      Enable scale-to-zero on non-production Lakebase compute; stop idle instances.
+    docs:
+      - https://docs.databricks.com/oltp/
+
+  - id: LKB-002
+    domain: lakebase
+    title: App/agent Lakebase roles with owner or superuser privileges
+    description: >
+      An application or agent Postgres role that owns the schema or has
+      superuser privileges violates least privilege and can alter or drop app
+      data or escalate.
+    severity: high
+    level: REQUIRED
+    requires: [lakebase]
+    frameworks: ["DBX-SBP:IAM-3"]
+    waf_pillars: [security]
+    agent_explainer: >
+      The app role should be able to read/write its own tables, nothing more.
+      Remove owner/superuser and grant table-level privileges on the app schema.
+    remediation: >
+      Create a least-privilege role scoped to the app schema (no OWNER, no
+      SUPERUSER); grant SELECT/INSERT/UPDATE/DELETE on its tables only.
+    docs:
+      - https://docs.databricks.com/oltp/

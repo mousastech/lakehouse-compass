@@ -1,0 +1,148 @@
+# Genie Ontology Readiness rules (GEN-READY-*). One rule per readiness pillar,
+# emitted by GenieReadinessCollector for any AVAILABLE pillar that shows a gap.
+# A faithful port of databricks-solutions/genie-ontology-readiness: the pillar
+# score/level drives the finding severity; these rules map the gap onto the
+# Databricks Well-Architected Framework so it flows into Findings / WAF / digest.
+rules:
+  - id: GEN-READY-UC
+    domain: genie_readiness
+    title: Unity Catalog foundation not yet Genie-ready
+    description: >
+      Genie Ontology is built on a governed Unity Catalog. Few catalogs/schemas
+      or a thin table footprint means there is little curated data for Genie to
+      reason over.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      Establish Unity Catalog as the governed foundation: broaden catalogs,
+      schemas and tables beyond an initial workload so Genie has curated data.
+    remediation: >
+      Adopt Unity Catalog broadly; migrate legacy hive_metastore tables into UC
+      and organize a governed catalog/schema layout.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/
+
+  - id: GEN-READY-METADATA
+    domain: genie_readiness
+    title: Metadata richness below Genie-ready coverage
+    description: >
+      Genie reads table and column comments (and governed tags) to understand the
+      data. Low description coverage degrades answer quality.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Comment tables and columns — especially the gold layer — and apply governed
+      tags. Genie relies on these descriptions to reason.
+    remediation: >
+      Add descriptions to the most-queried tables and their columns; enforce
+      coverage on gold assets; apply governed tags for discovery.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/
+
+  - id: GEN-READY-RELATIONSHIPS
+    domain: genie_readiness
+    title: Relationships & modeling thin for Genie joins
+    description: >
+      Declared primary/foreign keys and a curated gold/mart layer let Genie infer
+      joins reliably. Their absence forces ad-hoc, error-prone joins.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Declare PK/FK constraints and build a curated gold/mart layer of pre-joined,
+      analytics-ready tables for Genie.
+    remediation: >
+      Declare PRIMARY KEY / FOREIGN KEY constraints on gold tables and curate a
+      gold/mart layer of pre-joined, analytics-ready tables.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/
+
+  - id: GEN-READY-METRICS
+    domain: genie_readiness
+    title: Metric-view (semantic) layer below Genie-ready coverage
+    description: >
+      UC metric views are the governed metrics foundation that feeds Genie
+      Ontology. Few or undocumented metric views mean KPIs are not centrally
+      defined for consistent answers.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Define UC metric views for core KPIs and describe their dimensions and
+      measures; Genie reads metric-view comments to reason.
+    remediation: >
+      Define UC metric views for common KPIs, add descriptions to the view,
+      dimensions and measures, and certify them.
+    docs:
+      - https://docs.databricks.com/sql/language-manual/sql-ref-syntax-ddl-create-view-metric
+
+  - id: GEN-READY-AGENTS
+    domain: genie_readiness
+    title: Genie Agents absent or inactive
+    description: >
+      Curated Genie Agents are the entry point to natural-language analytics.
+      No agents, or agents with no recent activity, signal the surface is not yet
+      established.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [interoperability_usability, data_ai_governance]
+    agent_explainer: >
+      Create curated Genie Agents (instructions, verified SQL, benchmarks) and
+      drive adoption; retire stale agents.
+    remediation: >
+      Create a curated Genie Agent as the natural-language entry point; add
+      instructions, verified SQL and benchmarks; drive adoption or retire stale agents.
+    docs:
+      - https://docs.databricks.com/genie/
+
+  - id: GEN-READY-DOMAINS
+    domain: genie_readiness
+    title: Domains & stewardship not established
+    description: >
+      Business-aligned domains, named stewards and certified assets tell users
+      (and Genie) which data to trust. Their absence weakens governed discovery.
+    severity: medium
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      Organize assets into business-aligned domains, assign named stewards, and
+      certify canonical gold tables.
+    remediation: >
+      Apply domain and owner/steward governed tags; certify canonical gold tables
+      via system.certification_status so Genie can trust your busiest data.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/
+
+  - id: GEN-READY-ADOPTION
+    domain: genie_readiness
+    title: Adoption & activity limited
+    description: >
+      Active users and query activity indicate a living analytics estate for Genie
+      to build on. Low activity limits the value and the learning signal.
+    severity: low
+    level: RECOMMENDED
+    requires: [genie_readiness]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [interoperability_usability]
+    agent_explainer: >
+      Grow active usage and query activity on the governed estate so Genie has a
+      living surface to serve and learn from.
+    remediation: >
+      Onboard business users, publish curated Genie Agents, and promote governed
+      datasets to grow active usage.
+    docs:
+      - https://docs.databricks.com/genie/

@@ -1,0 +1,40 @@
+resources:
+  jobs:
+    compass_scan:
+      name: lakehouse-compass-scan-${bundle.target}
+      description: "Lakehouse Compass scan job — evaluates rules and writes findings + scores to main.lakehouse_compass.* Delta tables. In DEMO_MODE it writes synthetic fixtures."
+      tags:
+        project: lakehouse-compass
+        phase: "0"
+
+      # Weekly check-up cadence (paused by default in Phase 0).
+      schedule:
+        quartz_cron_expression: "0 0 6 ? * MON"
+        timezone_id: America/Sao_Paulo
+        pause_status: PAUSED
+
+      tasks:
+        - task_key: scan
+          spark_python_task:
+            python_file: ../jobs/scan/run_scan.py
+            parameters:
+              - "--mode"
+              - "live"
+              - "--catalog"
+              - "moi_ai_catalog"
+              - "--schema"
+              - "lakehouse_compass"
+              - "--workspace_id"
+              - "7474658545709121"
+              - "--window_days"
+              - "30"
+          environment_key: compass_env
+
+      environments:
+        - environment_key: compass_env
+          spec:
+            client: "3"
+            dependencies:
+              - pyyaml
+              - databricks-sdk
+              - pg8000

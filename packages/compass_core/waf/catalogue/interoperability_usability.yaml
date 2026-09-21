@@ -1,0 +1,82 @@
+pillar: interoperability_usability
+# Interoperability & Usability — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/interoperability-and-usability/index.html
+controls:
+  - id: IU-FMT-01
+    principle: Open formats
+    title: Open table formats (Delta / UniForm / Iceberg)
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Data is stored in open formats (Delta, with UniForm/Iceberg interop where needed).
+    remediation:
+      summary: Standardize on Delta; enable UniForm for Iceberg/Hudi interoperability.
+      doc_url: https://docs.databricks.com/en/delta/uniform.html
+
+  - id: IU-SHARE-01
+    principle: Sharing
+    title: Delta Sharing / Databricks-to-Databricks sharing
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Cross-org/team data exchange uses Delta Sharing rather than copies.
+    remediation:
+      summary: Publish shared data via Delta Sharing / D2D instead of extracts.
+      doc_url: https://docs.databricks.com/en/data-sharing/index.html
+
+  - id: IU-FED-01
+    principle: Federation
+    title: Lakehouse Federation for external sources
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: External sources are queried via Lakehouse Federation rather than ETL copies.
+    remediation:
+      summary: Use Lakehouse Federation to query external databases in place.
+      doc_url: https://docs.databricks.com/en/query-federation/index.html
+
+  - id: IU-DISC-01
+    principle: Discoverability
+    title: Assets are discoverable (descriptions & lineage)
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Assets carry descriptions so Catalog Explorer / search surfaces them.
+    rule: GOV-025
+    remediation:
+      summary: Add descriptions and rely on column-level lineage for discovery.
+      doc_url: https://docs.databricks.com/en/discover/index.html
+
+  - id: IU-NL-01
+    principle: Self-service analytics
+    title: Natural-language access via Genie
+    provenance: waf-docs
+    measurability: rest_api
+    severity: medium
+    criteria: Curated Genie Agents give business users natural-language access.
+    rule: GEN-001
+    remediation:
+      summary: Publish curated Genie Agents as the natural-language entry point.
+      doc_url: https://docs.databricks.com/en/genie/index.html
+
+  - id: IU-DP-01
+    principle: Data as products
+    title: Data-as-products with semantic consistency
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Curated, documented data products with consistent semantics are published.
+    remediation:
+      summary: Package gold data as products with owners, contracts and metric views.
+      doc_url: https://docs.databricks.com/en/lakehouse-architecture/interoperability-and-usability/best-practices.html
+
+  - id: IU-PROV-01
+    principle: Self-service provisioning
+    title: Self-service provisioning & compute templates
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Users self-serve via compute policies / T-shirt-sized templates.
+    remediation:
+      summary: Provide compute policies and sized templates for self-service.
+      doc_url: https://docs.databricks.com/en/admin/clusters/policies.html

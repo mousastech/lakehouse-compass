@@ -1,0 +1,95 @@
+pillar: data_ai_governance
+# Data & AI Governance — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/data-governance/index.html
+controls:
+  - id: DG-META-01
+    principle: Metadata & discoverability
+    title: Tables carry descriptions
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: A high share of tables in the governed catalog have descriptions.
+    rule: GOV-025
+    remediation:
+      summary: Add descriptions to the most-queried tables; enforce coverage on gold assets.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/index.html
+
+  - id: DG-META-02
+    principle: Metadata & discoverability
+    title: Governed tags are applied
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Governed tags are applied for classification and discovery.
+    rule: GOV-016
+    remediation:
+      summary: Define a tag taxonomy and apply governed tags to eligible assets.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/tags.html
+
+  - id: DG-AI-01
+    principle: AI governance
+    title: Genie Agents are curated
+    provenance: waf-docs
+    measurability: rest_api
+    severity: medium
+    criteria: Genie Agents have descriptions, instructions and sample questions.
+    rule: GEN-001
+    remediation:
+      summary: Add descriptions, instructions and certified sample questions to each agent.
+      doc_url: https://docs.databricks.com/en/genie/index.html
+
+  - id: DG-AI-02
+    principle: AI governance
+    title: Genie Agents built on certified metric views
+    provenance: waf-docs
+    measurability: rest_api
+    severity: medium
+    criteria: Core-metric Genie Agents sit on certified UC metric views.
+    rule: GEN-013
+    remediation:
+      summary: Define and certify UC metric views for the agent's core metrics.
+      doc_url: https://docs.databricks.com/en/genie/index.html
+
+  - id: DG-LIN-01
+    principle: Lineage & auditability
+    title: Data and model lineage captured
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Table and model lineage is available for governed assets.
+    remediation:
+      summary: Rely on UC automatic lineage; ensure jobs/notebooks run under UC.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/data-lineage.html
+
+  - id: DG-ACL-01
+    principle: Fine-grained access
+    title: Row filters and column masks for governance
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Sensitive/regulated data uses row filters and column masks.
+    remediation:
+      summary: Apply row filters and column masks to governed sensitive data.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/row-and-column-filters.html
+
+  - id: DG-DQ-01
+    principle: Data quality
+    title: Data-quality expectations enforced
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Pipelines enforce expectations; quality is monitored.
+    remediation:
+      summary: Add DLT/Lakeflow expectations and Lakehouse Monitoring for data quality.
+      doc_url: https://docs.databricks.com/en/lakehouse-monitoring/index.html
+
+  - id: DG-MOD-01
+    principle: Catalog design
+    title: Medallion catalog/schema design
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: A medallion (bronze/silver/gold) catalog strategy is in place.
+    remediation:
+      summary: Adopt a medallion catalog/schema design with environment-aware bindings.
+      doc_url: https://docs.databricks.com/en/lakehouse/medallion.html

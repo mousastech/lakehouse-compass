@@ -1,0 +1,35 @@
+resources:
+  jobs:
+    compass_digest:
+      name: lakehouse-compass-digest-${bundle.target}
+      description: "Lakehouse Compass proactive digest — turns the last two scans into a plain-language status (weakest WAF pillars, what changed, criticals) written to moi_ai_catalog.lakehouse_compass.digests and optionally pushed to Slack (COMPASS_SLACK_WEBHOOK). Never executes remediation."
+      tags:
+        project: lakehouse-compass
+        phase: "1"
+
+      # Autonomous cadence: run shortly after the weekly scan. PAUSED by default
+      # (Phase 0/1) — flip to UNPAUSED to make Compass report status on its own.
+      schedule:
+        quartz_cron_expression: "0 30 6 ? * MON"
+        timezone_id: America/Sao_Paulo
+        pause_status: PAUSED
+
+      tasks:
+        - task_key: digest
+          spark_python_task:
+            python_file: ../jobs/digest/run_digest.py
+            parameters:
+              - "--catalog"
+              - "moi_ai_catalog"
+              - "--schema"
+              - "lakehouse_compass"
+              - "--workspace_id"
+              - "7474658545709121"
+          environment_key: compass_env
+
+      environments:
+        - environment_key: compass_env
+          spec:
+            client: "3"
+            dependencies:
+              - pyyaml

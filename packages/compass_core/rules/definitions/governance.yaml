@@ -1,0 +1,41 @@
+rules:
+  - id: GOV-025
+    domain: governance
+    title: Top tables lacking descriptions (metadata debt)
+    description: >
+      Tables without comments/descriptions degrade discoverability and the
+      quality of Genie/agent answers. A high share of undocumented tables is
+      metadata debt that lowers Semantic Readiness.
+    severity: low
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Undocumented tables make Genie and analysts guess. Add descriptions to the
+      most-queried tables first.
+    remediation: >
+      Add COMMENT ON TABLE / column comments to the top-queried tables; enforce
+      description coverage for gold assets.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/
+
+  - id: GOV-016
+    domain: governance
+    title: Governed tags defined but never applied
+    description: >
+      Governed tag policies that are defined but applied to few or no objects
+      indicate a governance boundary that is not actually in force.
+    severity: medium
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-1"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      A tag policy nobody applies protects nothing. Apply governed tags to the
+      objects they are meant to classify.
+    remediation: >
+      Apply governed tags to the relevant tables/columns, or retire unused tag
+      policies.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/tags.html

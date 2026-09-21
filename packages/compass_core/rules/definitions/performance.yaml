@@ -1,0 +1,21 @@
+rules:
+  - id: PERF-010
+    domain: performance
+    title: High query latency on interactive workloads
+    description: >
+      A material share of queries run slowly (high p90 duration), indicating
+      under-sized or contended warehouses, missing clustering, or expensive
+      scans.
+    severity: medium
+    level: RECOMMENDED
+    requires: [query]
+    frameworks: []
+    waf_pillars: [performance_efficiency]
+    agent_explainer: >
+      Slow queries hurt adoption and cost. Right-size warehouses, cluster hot
+      tables, and review the slowest statements.
+    remediation: >
+      Review the slowest statements in system.query.history; right-size the
+      warehouse; add liquid clustering / Z-ordering on hot tables.
+    docs:
+      - https://docs.databricks.com/sql/admin/warehouse-monitoring.html

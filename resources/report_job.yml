@@ -1,0 +1,45 @@
+resources:
+  jobs:
+    compass_report:
+      name: lakehouse-compass-report-${bundle.target}
+      description: "Lakehouse Compass — premium PDF diagnostic report for a workspace_id + scan_id. Writes to the reports UC Volume and appends a checkup_reports row."
+      tags:
+        project: lakehouse-compass
+        phase: "1"
+
+      # Allow the app's service principal to trigger this job (Generate report button).
+      permissions:
+        - level: CAN_MANAGE_RUN
+          service_principal_name: 9e5eaa76-9282-4a5a-be66-41397adf8313
+
+      parameters:
+        - name: workspace_id
+          default: "7474658545709121"
+        - name: scan_id
+          default: ""
+
+      tasks:
+        - task_key: report
+          spark_python_task:
+            python_file: ../jobs/report/run_checkup.py
+            parameters:
+              - "--catalog"
+              - "moi_ai_catalog"
+              - "--schema"
+              - "lakehouse_compass"
+              - "--volume"
+              - "reports"
+              - "--workspace_id"
+              - "{{job.parameters.workspace_id}}"
+              - "--scan_id"
+              - "{{job.parameters.scan_id}}"
+          environment_key: report_env
+
+      environments:
+        - environment_key: report_env
+          spec:
+            client: "3"
+            dependencies:
+              - weasyprint
+              - markdown
+              - pyyaml

@@ -1,0 +1,20 @@
+rules:
+  - id: USG-010
+    domain: usage
+    title: Query activity concentrated in a single identity
+    description: >
+      When one identity drives most query activity, the platform's value is
+      concentrated and adoption is shallow — a bus-factor and adoption risk.
+    severity: low
+    level: CONTEXT_DEPENDENT
+    requires: [query]
+    frameworks: []
+    waf_pillars: [operational_excellence]
+    agent_explainer: >
+      Most activity comes from one user/SP. Broaden enablement and confirm
+      service-principal workloads are attributed.
+    remediation: >
+      Drive enablement across teams; confirm SP-driven workloads are expected
+      and attributed to a use case.
+    docs:
+      - https://docs.databricks.com/admin/account-settings/usage.html

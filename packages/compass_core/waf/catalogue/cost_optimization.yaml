@@ -1,0 +1,119 @@
+pillar: cost_optimization
+# Cost Optimization — Databricks WAF.
+# https://docs.databricks.com/en/lakehouse-architecture/cost-optimization/index.html
+controls:
+  - id: CO-ATTR-01
+    principle: Spend visibility & attribution
+    title: Spend is attributed via tags
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: A high share of usage is attributable to an owner/team via tags.
+    rule: FIN-027
+    remediation:
+      summary: Enforce tagging on compute, jobs and SQL so spend attributes to owners.
+      doc_url: https://docs.databricks.com/en/admin/account-settings/usage.html
+
+  - id: CO-ATTR-02
+    principle: Spend visibility & attribution
+    title: Unattributed spend is below threshold
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: Unattributed (untagged) spend is under the configured threshold.
+    rule: FIN-030
+    remediation:
+      summary: Add a tag-enforcement policy; run a tag-housekeeping job on untagged resources.
+      doc_url: https://docs.databricks.com/en/admin/account-settings/usage.html
+
+  - id: CO-AI-01
+    principle: Cost controls
+    title: AI serving endpoints have spend caps
+    provenance: waf-docs
+    measurability: system_table
+    severity: high
+    criteria: Serving/AI endpoints have budgets or rate limits set.
+    rule: FIN-028
+    remediation:
+      summary: Set AI Gateway budgets / rate limits and a spend cap per endpoint.
+      doc_url: https://docs.databricks.com/en/ai-gateway/index.html
+
+  - id: CO-AI-02
+    principle: Cost controls
+    title: AI spend is attributed and capped
+    provenance: waf-docs
+    measurability: system_table
+    severity: medium
+    criteria: AI/inference spend is attributed and bounded by a cap.
+    rule: AIG-003
+    remediation:
+      summary: Front inference with AI Gateway; attribute and cap AI spend.
+      doc_url: https://docs.databricks.com/en/ai-gateway/index.html
+
+  - id: CO-COMP-01
+    principle: Compute efficiency
+    title: Lakebase / compute scales to zero when idle
+    provenance: waf-docs
+    measurability: rest_api
+    severity: medium
+    criteria: Non-production Lakebase / compute scales to zero when idle.
+    rule: FIN-029
+    remediation:
+      summary: Enable scale-to-zero on non-production compute; stop idle instances.
+      doc_url: https://docs.databricks.com/en/oltp/index.html
+
+  - id: CO-COMP-02
+    principle: Compute efficiency
+    title: Lakebase instances not left running idle
+    provenance: waf-docs
+    measurability: rest_api
+    severity: low
+    criteria: Running Lakebase instances are justified (not idle).
+    rule: LKB-003
+    remediation:
+      summary: Stop idle instances; prune idle branches/snapshots.
+      doc_url: https://docs.databricks.com/en/oltp/index.html
+
+  - id: CO-COMP-03
+    principle: Compute efficiency
+    title: Jobs compute for scheduled workloads
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Scheduled/batch workloads use jobs (not all-purpose) compute.
+    remediation:
+      summary: Move scheduled workloads to jobs compute; reserve all-purpose for interactive.
+      doc_url: https://docs.databricks.com/en/compute/index.html
+
+  - id: CO-COMP-04
+    principle: Compute efficiency
+    title: Auto-termination on interactive compute
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Interactive clusters have auto-termination configured.
+    remediation:
+      summary: Set auto-termination on all-purpose clusters; use pools/autoscaling.
+      doc_url: https://docs.databricks.com/en/compute/cluster-config-best-practices.html
+
+  - id: CO-COMP-05
+    principle: Compute efficiency
+    title: Photon and current runtimes
+    provenance: waf-docs
+    measurability: attestation
+    severity: low
+    criteria: Workloads use Photon and supported, current runtimes.
+    remediation:
+      summary: Enable Photon; upgrade to supported LTS runtimes for price/performance.
+      doc_url: https://docs.databricks.com/en/compute/photon.html
+
+  - id: CO-GOV-01
+    principle: Cost governance
+    title: Account-level budgets and alerts
+    provenance: waf-docs
+    measurability: attestation
+    severity: medium
+    criteria: Account budgets with alerts are configured.
+    remediation:
+      summary: Configure account budgets and alerting on spend thresholds.
+      doc_url: https://docs.databricks.com/en/admin/account-settings/budgets.html

@@ -1,0 +1,23 @@
+resources:
+  apps:
+    compass_app:
+      name: lakehouse-compass
+      description: "Lakehouse Compass — the Databricks platform doctor: continuous check-up, maintenance, compliance and remediation planning."
+      source_code_path: ../app
+
+      # Phase 1: the app reads the scan job's Delta output via the AppKit
+      # analytics plugin (SQL warehouse). Lakebase (app state) and a Unity AI
+      # Gateway serving endpoint (Compass Agent) are added in Phase 2.
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
+        # Compass Agent LLM — a Unity AI Gateway–governed serving endpoint.
+        - name: compass-llm
+          serving_endpoint:
+            name: databricks-claude-sonnet-4-5
+            permission: CAN_QUERY
+      # Deferred:
+      #   - name: postgres
+      #     postgres: { branch: ..., database: ..., permission: CAN_CONNECT_AND_CREATE }
