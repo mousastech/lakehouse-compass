@@ -152,7 +152,10 @@ export const TOOL_SPECS = [
   { type: 'function', function: { name: 'run_named_query', description: 'Run a whitelisted named query (scores, findings, cost_summary, compliance, capabilities, trend, reports) for the selected workspace.', parameters: { type: 'object', properties: { query_id: { type: 'string' } }, required: ['query_id'] } } },
   { type: 'function', function: { name: 'propose_remediation_plan', description: 'Return a prioritized remediation plan for the selected workspace: open findings ranked by severity and how weak the Well-Architected pillar they touch is. Use this to triage what to fix first.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'draft_proposed_change', description: 'Draft a ProposedChange (steps, code, rollback, blast radius) for a finding and persist it for human approval. Never executes.', parameters: { type: 'object', properties: { finding_id: { type: 'string' } }, required: ['finding_id'] } } },
-  { type: 'function', function: { name: 'search_docs', description: 'Return Databricks docs URLs from the rule catalog matching a topic.', parameters: { type: 'object', properties: { topic: { type: 'string' } }, required: ['topic'] } } },
+  { type: 'function', function: { name: 'search_docs', description: 'Return Databricks docs URLs from the rule catalog and WAF controls matching a topic.', parameters: { type: 'object', properties: { topic: { type: 'string' } }, required: ['topic'] } } },
+  { type: 'function', function: { name: 'get_waf_control', description: 'Get one Well-Architected control by control_id (e.g. CO-ATTR-01): pillar, principle, title, severity, status, remediation, doc_url and mapped rule_id.', parameters: { type: 'object', properties: { control_id: { type: 'string' } }, required: ['control_id'] } } },
+  { type: 'function', function: { name: 'get_waf_controls', description: 'List Well-Architected controls for the selected workspace at the latest scan, optionally filtered by pillar and/or status (pass, gap, attestation). Use for "how do I improve <pillar>" / control-gap questions.', parameters: { type: 'object', properties: { pillar: { type: 'string' }, status: { type: 'string' } } } } },
+  { type: 'function', function: { name: 'get_waf_pillars', description: 'Get per-pillar Well-Architected band scores (score + controls total/measured/passed + low/high band) for the selected workspace. Use for pillar-level context.', parameters: { type: 'object', properties: {} } } },
 ];
 
 export async function executeTool(name: string, args: Record<string, unknown>, ws: string, user: string): Promise<unknown> {
@@ -199,12 +202,39 @@ export async function executeTool(name: string, args: Record<string, unknown>, w
       return (await buildRemediationPlan(ws)).slice(0, 25);
     case 'draft_proposed_change':
       return draftChange(String(args.finding_id), user, ws);
+    case 'get_waf_control':
+      return runSql(`SELECT t.control_id, t.pillar, t.principle, t.title, t.severity, t.status, t.remediation, t.doc_url, t.rule_id FROM ${CAT}.waf_controls t WHERE t.scan_id=${latest('waf_controls', ws)} ${w ? `AND t.workspace_id='${w}'` : ''} AND t.control_id='${esc(String(args.control_id))}' LIMIT 1`);
+    case 'get_waf_controls': {
+      const conds = [`t.scan_id=${latest('waf_controls', ws)}`];
+      if (w) conds.push(`t.workspace_id='${w}'`);
+      if (typeof args.pillar === 'string') conds.push(`t.pillar='${esc(args.pillar)}'`);
+      if (typeof args.status === 'string') conds.push(`t.status='${esc(args.status)}'`);
+      return runSql(`SELECT t.control_id, t.pillar, t.principle, t.title, t.severity, t.status, t.remediation, t.doc_url, t.rule_id FROM ${CAT}.waf_controls t WHERE ${conds.join(' AND ')} ORDER BY t.pillar, t.control_id LIMIT 60`);
+    }
+    case 'get_waf_pillars':
+      return runSql(`SELECT t.pillar, t.score, t.controls_total, t.controls_measured, t.controls_passed, t.low, t.high FROM ${CAT}.waf_scores t WHERE t.scan_id=${latest('waf_scores', ws)} ${w ? `AND t.workspace_id='${w}'` : ''} ORDER BY t.pillar`);
     case 'search_docs': {
       const topic = String(args.topic || '').toLowerCase();
-      const hits = Object.entries(RULE_CATALOG)
+      const ruleHits = Object.entries(RULE_CATALOG)
         .filter(([id, r]) => (id + ' ' + r.title + ' ' + r.domain).toLowerCase().includes(topic))
         .flatMap(([id, r]) => r.docs.map((u) => ({ rule_id: id, url: u })));
-      return hits.slice(0, 6);
+      let wafHits: { control_id: string; url: string }[] = [];
+      if (topic) {
+        const like = `%${esc(topic)}%`;
+        const rows = await runSql(
+          `SELECT t.control_id, t.doc_url FROM ${CAT}.waf_controls t WHERE t.scan_id=${latest('waf_controls', ws)} ${w ? `AND t.workspace_id='${w}'` : ''} AND t.doc_url IS NOT NULL AND t.doc_url<>'' AND (LOWER(t.control_id) LIKE '${like}' OR LOWER(t.title) LIKE '${like}' OR LOWER(t.pillar) LIKE '${like}' OR LOWER(t.principle) LIKE '${like}') ORDER BY t.pillar, t.control_id LIMIT 8`
+        );
+        wafHits = (rows as Record<string, unknown>[]).map((r) => ({ control_id: String(r.control_id), url: String(r.doc_url) }));
+      }
+      const seen = new Set<string>();
+      const out: ({ rule_id: string; url: string } | { control_id: string; url: string })[] = [];
+      for (const h of [...ruleHits, ...wafHits]) {
+        if (seen.has(h.url)) continue;
+        seen.add(h.url);
+        out.push(h);
+        if (out.length >= 8) break;
+      }
+      return out;
     }
     default:
       return { error: `unknown tool ${name}` };

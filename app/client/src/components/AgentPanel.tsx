@@ -17,8 +17,34 @@ interface Governance {
 const SUGGESTIONS = [
   'What are my top security risks and why do they matter?',
   'Summarize FinOps: where is my spend and what is unattributed?',
-  'Draft a proposed change for the critical finding.',
+  'How do I improve my Cost Optimization pillar? Cite the WAF controls.',
 ];
+
+// Render a plain-text segment, turning bare http(s) URLs (e.g. docs links the
+// agent cites for WAF controls) into clickable links. Trailing sentence
+// punctuation is kept outside the anchor.
+const URL_RE = /(https?:\/\/[^\s<]+)/g;
+function LinkedText({ text }: { text: string }) {
+  const parts = text.split(URL_RE);
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (!/^https?:\/\//.test(p)) return <span key={i}>{p}</span>;
+        const m = p.match(/[.,;:!?)]+$/);
+        const trail = m ? m[0] : '';
+        const url = trail ? p.slice(0, -trail.length) : p;
+        return (
+          <span key={i}>
+            <a href={url} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--primary)' }}>
+              {url}
+            </a>
+            {trail}
+          </span>
+        );
+      })}
+    </>
+  );
+}
 
 export function AgentPanel({ autoFocus = false }: { autoFocus?: boolean }) {
   const t = useT();
@@ -114,7 +140,7 @@ export function AgentPanel({ autoFocus = false }: { autoFocus?: boolean }) {
                   {seg.text}
                 </button>
               ) : (
-                <span key={i}>{seg.text}</span>
+                <LinkedText key={i} text={seg.text} />
               )
             )}
             {streaming && <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-[var(--primary)] align-middle" />}

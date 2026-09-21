@@ -71,8 +71,9 @@ export async function askCompass(q: string, ws: string, h: AgentHandlers): Promi
   h.onDone();
 }
 
-// Split answer text into plain segments and citation chips ([SEC-014], [F-1001]).
-const CITE = /\[([A-Z]{2,4}-\d{2,4}|F-\d+)\]/g;
+// Split answer text into plain segments and citation chips ([SEC-014], [F-1001],
+// and WAF control ids like [CO-ATTR-01]).
+const CITE = /\[([A-Z]{2,4}-[A-Z]{2,5}-\d{1,3}|[A-Z]{2,4}-\d{2,4}|F-\d+)\]/g;
 export function splitCitations(text: string): { text: string; cite?: string }[] {
   const out: { text: string; cite?: string }[] = [];
   let last = 0;
