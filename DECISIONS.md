@@ -429,6 +429,40 @@ the same internal-catalog filter to numerator and denominator (pct ≤ 100); and
 `--all_workspaces` target list front-loads the local workspace before the cap so it
 never exceeds `--max_workspaces`.
 
+## D20 — AIG-004 (agent endpoint gateway governance): accepted deviation ✅
+
+**Context.** The Compass Agent calls the shared system foundation-model endpoint
+`databricks-claude-sonnet-4-5` (`system.ai.databricks-claude-sonnet-4-5`,
+pay-per-token). Its AI Gateway has `usage_tracking=on` but `guardrails=off` and
+`payload_logging (inference tables)=off`, which the app honestly surfaces as
+finding **AIG-004** (amber banner on the Agent + AI Estate screens, and Self-check).
+
+**Investigation (22-set-2026).** A *dedicated* governed serving endpoint for this
+FM is **not possible**: creating a custom endpoint that serves
+`system.ai.databricks-claude-sonnet-4-5` is rejected by Databricks
+("Model … is not supported for inference at this time"). Pay-per-token FMs are
+only reachable via the pre-provisioned shared endpoints. The remaining ways to
+fully clear AIG-004 each carry a worse trade-off:
+- **Configure the shared endpoint** (enable inference tables + guardrails on
+  `databricks-claude-sonnet-4-5`): endpoint-wide — it would log the prompts/
+  responses of **every** user of that FM in `fevm-moi-ai` and apply guardrails to
+  all of them. Broad, privacy-sensitive, not ours to impose.
+- **External-model proxy** (an `external_model` endpoint with provider
+  `databricks-model-serving` pointing at the shared endpoint, with full gateway):
+  isolates Compass traffic, but requires storing a Databricks **token as a secret**
+  — a governance smell inside a *governance* app.
+
+**Decision.** **Accept the deviation** for this internal/demo app. No infra
+change. The app already reports it truthfully rather than hiding it, which is the
+honest-diagnostic ethos of Compass (cf. NOT_AVAILABLE handling, [[D18a]]).
+
+**Before real production use**, front the agent with a properly governed endpoint
+so Compass traffic is guarded and logged **in isolation** (never on the shared
+endpoint): input/output guardrails (PII, prompt-injection, content policy) +
+inference tables / payload logging + usage tracking + a spend cap. The
+external-model proxy above (secret-scoped token) or a provisioned-throughput
+endpoint are the viable shapes. Until then AIG-004 stays surfaced by design.
+
 ## Deferred to later phases
 - ⏭️ **Lakebase app state** (exceptions, approvals, checklist assignments,
   maintenance tasks, agent memory, preferences) — Phase 1/2. Schema/roles per
