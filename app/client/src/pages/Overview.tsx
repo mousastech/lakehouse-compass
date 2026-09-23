@@ -85,9 +85,9 @@ export function Overview() {
           <p className="mt-1 text-sm text-muted-foreground">{t('overview.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          {trend.rows[0]?.generated_at && (
+          {toStr(trend.rows[0]?.generated_at) && (
             <span className="text-xs text-muted-foreground">
-              {t('meta.lastScan')}: <span className="font-medium text-foreground">{fmtDate(toStr(trend.rows[0].generated_at))}</span>
+              {t('meta.lastScan')}: <span className="font-medium text-foreground">{fmtDate(toStr(trend.rows[0]?.generated_at))}</span>
             </span>
           )}
           <span
