@@ -5,7 +5,7 @@ import { useLiveRows } from '../lib/analytics';
 import { useApi } from '../lib/api';
 import { useWorkspace } from '../lib/workspace';
 import { normScore, normFinding, normCost, normCompliance } from '../lib/model';
-import { toNum } from '../lib/rows';
+import { toNum, toStr } from '../lib/rows';
 import { useT } from '../lib/i18n';
 import { fmtUsd, fmtDate, daysUntil } from '../lib/format';
 import { HealthRing } from '../components/HealthRing';
@@ -85,6 +85,11 @@ export function Overview() {
           <p className="mt-1 text-sm text-muted-foreground">{t('overview.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
+          {trend.rows[0]?.generated_at && (
+            <span className="text-xs text-muted-foreground">
+              {t('meta.lastScan')}: <span className="font-medium text-foreground">{fmtDate(toStr(trend.rows[0].generated_at))}</span>
+            </span>
+          )}
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
             style={{
