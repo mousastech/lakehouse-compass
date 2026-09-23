@@ -19,6 +19,30 @@ rules:
     docs:
       - https://docs.databricks.com/genie/
 
+  - id: GEN-COST-001
+    domain: genie
+    title: Genie Code users past the free allowance are billing
+    description: >
+      Genie Code ships a monthly free allowance (150 DBUs/user); usage beyond it
+      is billed. Users consistently past the allowance drive spend that should be
+      attributed to a named user and reviewed, especially service-principal
+      traffic which receives no free allowance.
+    severity: medium
+    level: CONTEXT_DEPENDENT
+    requires: [billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      One or more Genie Code users have exhausted the 150 DBU/month free
+      allowance and are now billing. Attribute the spend to named users and
+      confirm the paid usage is expected.
+    remediation: >
+      Review Genie Code consumers past the free allowance; attribute usage to
+      named users, set expectations on paid consumption, and watch
+      service-principal Genie traffic which gets no free allowance.
+    docs:
+      - https://docs.databricks.com/genie/
+
   - id: GEN-013
     domain: genie
     title: Genie Agents built on tables without certified metric views

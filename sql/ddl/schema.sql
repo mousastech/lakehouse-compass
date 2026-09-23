@@ -106,6 +106,23 @@ GRANT USE SCHEMA ON SCHEMA moi_ai_catalog.lakehouse_compass TO `9e5eaa76-9282-4a
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_readiness TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_readiness_pillars TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 
+-- Genie cost & consumption — one summary row per scan/ws (breakdowns as JSON),
+-- plus per-user free-vs-billed for the current month (append-only).
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_summary (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, window_days BIGINT,
+  billed_cost_usd DOUBLE, billed_dbus DOUBLE, free_dbus DOUBLE, active_users BIGINT,
+  by_surface_json STRING, by_channel_json STRING, by_sku_json STRING, trend_json STRING
+) USING DELTA;
+
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_by_user (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, run_as_user STRING,
+  genie_surface STRING, free_dbus DOUBLE, paid_dbus DOUBLE, billed_cost_usd DOUBLE,
+  free_allowance_limit BIGINT, over_allowance BOOLEAN
+) USING DELTA;
+
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_cost_summary TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_cost_by_user TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
 -- Generated diagnostic reports (append) — one row per PDF.
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.checkup_reports (
   report_id STRING, scan_id STRING, workspace_id STRING, workspace_name STRING, generated_at STRING,

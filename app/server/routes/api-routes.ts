@@ -22,6 +22,8 @@ import {
   digestsRows,
   genieReadinessRows,
   genieReadinessPillarsRows,
+  genieCostSummaryRows,
+  genieCostByUserRows,
 } from '../demo/dbrows';
 
 // AppKit's server plugin exposes `extend` to register extra Express routes.
@@ -70,5 +72,7 @@ export function setupApiRoutes(appkit: AppKitServer): void {
     app.get('/api/rows/reliability_summary', (_req, res) => res.json(reliabilitySummaryRows));
     app.get('/api/rows/genie_readiness', (_req, res) => res.json(genieReadinessRows));
     app.get('/api/rows/genie_readiness_pillars', (_req, res) => res.json(genieReadinessPillarsRows));
+    app.get('/api/rows/genie_cost_summary', (_req, res) => res.json(genieCostSummaryRows));
+    app.get('/api/rows/genie_cost_by_user', (_req, res) => res.json(genieCostByUserRows));
   });
 }

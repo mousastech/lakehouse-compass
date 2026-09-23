@@ -7,6 +7,7 @@ from .performance import PerformanceCollector
 from .usage import UsageCollector
 from .reliability import ReliabilityCollector
 from .genie import GenieCollector
+from .genie_cost import GenieCostCollector
 from .lakebase import LakebaseCollector
 from .genie_readiness import GenieReadinessCollector
 
@@ -21,6 +22,7 @@ __all__ = [
     "UsageCollector",
     "ReliabilityCollector",
     "GenieCollector",
+    "GenieCostCollector",
     "LakebaseCollector",
     "GenieReadinessCollector",
 ]

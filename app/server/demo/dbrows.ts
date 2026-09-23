@@ -320,6 +320,59 @@ export const genieReadinessPillarsRows = [
   },
 ];
 
+// Genie cost & consumption — summary (mirrors genie_cost_summary). One row/ws.
+export const genieCostSummaryRows = [
+  {
+    workspace_id: '7474658545709121',
+    workspace_name: 'moi-ai',
+    window_days: 30,
+    billed_cost_usd: 46.29,
+    billed_dbus: 661.23,
+    free_dbus: 369.52,
+    active_users: 4,
+    by_surface_json: JSON.stringify([
+      { surface: 'GENIE_CODE', list_cost: 46.29, dbus: 661.23 },
+      { surface: 'GENIE_AGENTS', list_cost: 0, dbus: 0 },
+    ]),
+    by_channel_json: JSON.stringify([
+      { channel: 'UI', dbus: 661.23 },
+      { channel: 'API', dbus: 0 },
+    ]),
+    by_sku_json: JSON.stringify([
+      { sku: 'ENTERPRISE_SERVERLESS_REAL_TIME_INFERENCE_US_EAST_OHIO', dbus: 661.23 },
+      { sku: 'GENIE_FREE_USAGE', dbus: 369.52 },
+    ]),
+    trend_json: JSON.stringify([
+      { usage_date: isoInDays(-6), list_cost: 5.1 },
+      { usage_date: isoInDays(-5), list_cost: 6.8 },
+      { usage_date: isoInDays(-4), list_cost: 4.2 },
+      { usage_date: isoInDays(-3), list_cost: 9.1 },
+      { usage_date: isoInDays(-2), list_cost: 7.4 },
+      { usage_date: isoInDays(-1), list_cost: 8.0 },
+      { usage_date: isoInDays(0), list_cost: 5.7 },
+    ]),
+  },
+];
+
+// Genie cost & consumption — per-user free-vs-billed (mirrors genie_cost_by_user).
+export const genieCostByUserRows = [
+  {
+    workspace_id: '7474658545709121', workspace_name: 'moi-ai',
+    run_as_user: 'moises.santos@databricks.com', genie_surface: 'GENIE_CODE',
+    free_dbus: 150, paid_dbus: 512.4, billed_cost_usd: 35.87, free_allowance_limit: 150, over_allowance: true,
+  },
+  {
+    workspace_id: '7474658545709121', workspace_name: 'moi-ai',
+    run_as_user: 'ana.silva@databricks.com', genie_surface: 'GENIE_CODE',
+    free_dbus: 148.83, paid_dbus: 148.83, billed_cost_usd: 10.42, free_allowance_limit: 150, over_allowance: true,
+  },
+  {
+    workspace_id: '7474658545709121', workspace_name: 'moi-ai',
+    run_as_user: 'carlos.rocha@databricks.com', genie_surface: 'GENIE_AGENTS',
+    free_dbus: 91.15, paid_dbus: 0, billed_cost_usd: 0, free_allowance_limit: null, over_allowance: false,
+  },
+];
+
 function isoInDays(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);

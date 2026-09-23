@@ -463,6 +463,43 @@ inference tables / payload logging + usage tracking + a spend cap. The
 external-model proxy above (secret-scoped token) or a provisioned-throughput
 endpoint are the viable shapes. Until then AIG-004 stays surfaced by design.
 
+## D21 — Genie cost & consumption monitoring on the Genie screen ✅
+
+**Context.** The Genie screen showed agent inventory (GEN-001) but no cost or
+consumption. A standalone AI/BI dashboard ("Genie Cost Monitor", authored by the
+user) already proved the queries against `system.billing.usage` filtered to
+`billing_origin_product='GENIE'`. The user asked to fold that report into
+Compass's Genie usage monitoring.
+
+**Decision.** Add a **Cost & Consumption** section to the Genie screen, fed by a
+new spark collector `genie_cost.py` (Genie domain) that runs the billing.usage
+Genie queries scoped per workspace and writes two Delta tables
+(`genie_cost_summary`, `genie_cost_by_user`). No new capability is registered —
+it rides the FinOps `billing` capability and is best-effort (writes nothing when
+Genie usage is absent, never fabricated), so coverage math is untouched.
+
+**Why it matters.**
+- **Lights up the surface split that was NOT_AVAILABLE.** Increment 7 marked the
+  Genie Code vs Agents/One split NOT_AVAILABLE because `query.history` lacked
+  `query_source`. `usage_metadata.genie.surface`/`.channel` on `billing.usage`
+  carries it — the correct source — so the split is now real, not fabricated.
+- **Enriches the free-allowance story.** New rule **GEN-COST-001** (Genie domain,
+  cost_optimization pillar) fires when GENIE_CODE users exceed the 150 DBU/month
+  free allowance, with real evidence, complementing the FinOps-domain FIN-030
+  generic Genie-spend signal (FIN-030 left unchanged).
+
+**Gotcha (fixed this pass).** An INNER `JOIN system.billing.list_prices` drops
+`GENIE_FREE_USAGE` rows (free usage has no price row) → free-DBU aggregates
+computed to 0. Switched to **LEFT JOIN** so free rows survive; billed cost still
+uses `COALESCE(pricing.effective_list.default, pricing.default, 0)`.
+
+**Clean-room note.** N/A — the source dashboard is the user's own SQL (no third-
+party/internal IP), unlike the FinOpsApp evaluation which stays blocked.
+
+**Deferred (Phase B).** The generic FinOps cost-optimization recommendation
+engine (all-purpose-for-jobs migration, savings bands, Next Best Action) —
+agreed to follow this Genie increment.
+
 ## Deferred to later phases
 - ⏭️ **Lakebase app state** (exceptions, approvals, checklist assignments,
   maintenance tasks, agent memory, preferences) — Phase 1/2. Schema/roles per
