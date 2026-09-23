@@ -330,9 +330,14 @@ export const genieCostSummaryRows = [
     billed_dbus: 661.23,
     free_dbus: 369.52,
     active_users: 4,
+    code_free_dbus: 269.06,
+    code_billed_dbus: 661.23,
+    code_total_dbus: 930.29,
+    code_billed_cost_usd: 46.29,
+    code_users: 4,
     by_surface_json: JSON.stringify([
-      { surface: 'GENIE_CODE', list_cost: 46.29, dbus: 661.23 },
-      { surface: 'GENIE_AGENTS', list_cost: 0, dbus: 0 },
+      { surface: 'GENIE_CODE', list_cost: 46.29, free_dbus: 269.06, billed_dbus: 661.23, dbus: 930.29 },
+      { surface: 'GENIE_AGENTS', list_cost: 0, free_dbus: 100.46, billed_dbus: 0, dbus: 100.46 },
     ]),
     by_channel_json: JSON.stringify([
       { channel: 'UI', dbus: 661.23 },
@@ -364,7 +369,7 @@ export const genieCostByUserRows = [
   {
     workspace_id: '7474658545709121', workspace_name: 'moi-ai',
     run_as_user: 'ana.silva@databricks.com', genie_surface: 'GENIE_CODE',
-    free_dbus: 148.83, paid_dbus: 148.83, billed_cost_usd: 10.42, free_allowance_limit: 150, over_allowance: true,
+    free_dbus: 150, paid_dbus: 80.4, billed_cost_usd: 5.63, free_allowance_limit: 150, over_allowance: true,
   },
   {
     workspace_id: '7474658545709121', workspace_name: 'moi-ai',
@@ -372,6 +377,23 @@ export const genieCostByUserRows = [
     free_dbus: 91.15, paid_dbus: 0, billed_cost_usd: 0, free_allowance_limit: null, over_allowance: false,
   },
 ];
+
+// Genie cost evolutionary series — 365 daily points (mirrors genie_cost_trend),
+// deterministic so the demo view is stable across restarts.
+export const genieCostTrendRows = Array.from({ length: 365 }, (_, k) => {
+  const i = 364 - k; // days ago (oldest first)
+  const ramp = i > 180 ? 0.3 : i > 90 ? 0.9 : 1.7;
+  const wave = 0.5 * Math.abs(Math.sin(i / 9));
+  const billed = Math.round((ramp + wave) * 100) / 100;
+  return {
+    workspace_id: '7474658545709121',
+    workspace_name: 'moi-ai',
+    usage_date: isoInDays(-i),
+    billed_cost_usd: billed,
+    billed_dbus: Math.round(billed * 14.3 * 100) / 100,
+    free_dbus: Math.round((6 + 4 * Math.abs(Math.sin(i / 5))) * 100) / 100,
+  };
+});
 
 function isoInDays(days: number): string {
   const d = new Date();

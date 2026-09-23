@@ -169,6 +169,9 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("window_days", LongType()),
             S("billed_cost_usd", DoubleType()), S("billed_dbus", DoubleType()),
             S("free_dbus", DoubleType()), S("active_users", LongType()),
+            S("code_free_dbus", DoubleType()), S("code_billed_dbus", DoubleType()),
+            S("code_total_dbus", DoubleType()), S("code_billed_cost_usd", DoubleType()),
+            S("code_users", LongType()),
             S("by_surface_json"), S("by_channel_json"), S("by_sku_json"), S("trend_json"),
         ]),
         "genie_cost_by_user": StructType([
@@ -176,6 +179,10 @@ def _schemas():
             S("genie_surface"), S("free_dbus", DoubleType()), S("paid_dbus", DoubleType()),
             S("billed_cost_usd", DoubleType()), S("free_allowance_limit", LongType()),
             S("over_allowance", BooleanType()),
+        ]),
+        "genie_cost_trend": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("usage_date"),
+            S("billed_cost_usd", DoubleType()), S("billed_dbus", DoubleType()), S("free_dbus", DoubleType()),
         ]),
     }
 
@@ -377,6 +384,7 @@ def run_live(args) -> None:
         capabilities += gcost.capabilities
         genie_cost_summary = gcost.inventory.get("genie_cost_summary", [])
         genie_cost_by_user = gcost.inventory.get("genie_cost_by_user", [])
+        genie_cost_trend = gcost.inventory.get("genie_cost_trend", [])
 
         sec = SecurityCollector(scan_id=scan_id, workspace_id=ws, workspace_name=ws_name).collect(spark)
         findings += sec.findings
@@ -572,6 +580,8 @@ def run_live(args) -> None:
             _write(spark, fq, "genie_cost_summary", genie_cost_summary)
         if genie_cost_by_user:
             _write(spark, fq, "genie_cost_by_user", genie_cost_by_user)
+        if genie_cost_trend:
+            _write(spark, fq, "genie_cost_trend", genie_cost_trend)
 
         _write(spark, fq, "cost_summary",
                [{"scan_id": scan_id, "workspace_id": r.get("workspace_id") or ws,

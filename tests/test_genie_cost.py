@@ -38,10 +38,15 @@ def _handler(*, summary, per_user):
     """Route each collector query to canned rows by a distinctive substring."""
 
     def h(q):
+        if "code_total_dbus" in q:
+            return [{"code_free_dbus": 269.06, "code_billed_dbus": 661.23, "code_total_dbus": 930.29,
+                     "code_billed_cost_usd": 46.29, "code_users": 4}]
         if "active_users" in q:
             return summary
         if "run_as_user" in q and "DATE_TRUNC('MONTH'" in q:
             return per_user
+        if "usage_date" in q and "billed_cost_usd" in q:
+            return [{"usage_date": "2026-09-20", "billed_cost_usd": 5.1, "billed_dbus": 73.2, "free_dbus": 2.0}]
         if "AS surface" in q:
             return [{"surface": "GENIE_CODE", "list_cost": 46.29, "dbus": 661.23}]
         if "AS channel" in q:
@@ -55,13 +60,17 @@ def _handler(*, summary, per_user):
     return h
 
 
-def test_no_genie_usage_returns_empty():
+def test_no_genie_usage_writes_zero_row():
+    # Billing resolved but no Genie usage → still writes a zero summary row so live
+    # data (honest zeros) wins over the demo fixture in the UI; emits no finding.
     spark = _FakeSpark(_handler(
         summary=[{"billed_cost_usd": 0, "billed_dbus": 0, "free_dbus": 0, "active_users": 0}],
         per_user=[],
     ))
     res = GenieCostCollector(workspace_id="w1").collect(spark)
-    assert "genie_cost_summary" not in res.inventory
+    rows = res.inventory["genie_cost_summary"]
+    assert len(rows) == 1
+    assert rows[0]["billed_dbus"] == 0.0 and rows[0]["free_dbus"] == 0.0
     assert res.findings == []
 
 
@@ -76,9 +85,14 @@ def test_summary_and_breakdowns_populated():
     r = rows[0]
     assert r["billed_dbus"] == 661.23
     assert r["active_users"] == 4
+    assert r["code_total_dbus"] == 930.29
+    assert r["code_billed_cost_usd"] == 46.29
+    assert r["code_users"] == 4
     surfaces = json.loads(r["by_surface_json"])
     assert surfaces[0]["surface"] == "GENIE_CODE"
     assert json.loads(r["trend_json"])[0]["list_cost"] == 5.1
+    trend = res.inventory["genie_cost_trend"]
+    assert len(trend) == 1 and trend[0]["billed_cost_usd"] == 5.1
 
 
 def test_over_allowance_emits_finding():

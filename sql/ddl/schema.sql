@@ -111,8 +111,12 @@ GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_readiness_pillars T
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_summary (
   scan_id STRING, workspace_id STRING, workspace_name STRING, window_days BIGINT,
   billed_cost_usd DOUBLE, billed_dbus DOUBLE, free_dbus DOUBLE, active_users BIGINT,
+  code_free_dbus DOUBLE, code_billed_dbus DOUBLE, code_total_dbus DOUBLE,
+  code_billed_cost_usd DOUBLE, code_users BIGINT,
   by_surface_json STRING, by_channel_json STRING, by_sku_json STRING, trend_json STRING
 ) USING DELTA;
+-- On an existing table the scan job's append writes with mergeSchema, so the
+-- code_* columns are added automatically on the next scan (no ALTER needed).
 
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_by_user (
   scan_id STRING, workspace_id STRING, workspace_name STRING, run_as_user STRING,
@@ -122,6 +126,14 @@ CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_by_user (
 
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_cost_summary TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_cost_by_user TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
+-- Genie cost evolutionary series — daily billed cost/DBUs over a long lookback
+-- (default 365d). The UI filters by period and rolls up to month client-side.
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_trend (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, usage_date STRING,
+  billed_cost_usd DOUBLE, billed_dbus DOUBLE, free_dbus DOUBLE
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_cost_trend TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 
 -- Generated diagnostic reports (append) — one row per PDF.
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.checkup_reports (

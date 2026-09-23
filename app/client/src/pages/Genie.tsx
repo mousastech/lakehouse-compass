@@ -1,4 +1,4 @@
-import { Sparkles, CheckCircle2, AlertTriangle, DollarSign, Gauge, Gift, Users } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertTriangle, DollarSign, Gauge, Gift, Users, Code2 } from 'lucide-react';
 import { useApi } from '../lib/api';
 import { useLiveRows } from '../lib/analytics';
 import { useWorkspace } from '../lib/workspace';
@@ -6,6 +6,7 @@ import { useT } from '../lib/i18n';
 import { toNum, toStr, toBool } from '../lib/rows';
 import { NotAvailable, SourceBadge } from '../components/SourceBadge';
 import { FindingsList } from '../components/FindingsList';
+import { GenieCostTrend } from '../components/GenieCostTrend';
 
 interface GenieSpace {
   space_id: string;
@@ -22,8 +23,7 @@ interface GenieResp {
   spaces?: GenieSpace[];
 }
 
-interface SurfaceRow { surface: string; list_cost: number; dbus: number }
-interface TrendRow { usage_date: string; list_cost: number }
+interface SurfaceRow { surface: string; list_cost: number; free_dbus: number; billed_dbus: number; dbus: number }
 
 // The analytics plugin auto-parses valid-JSON string columns in live mode, so the
 // value may already be an array; in demo/fixture mode it is a JSON string.
@@ -43,6 +43,20 @@ function parseArr<T>(v: unknown): T[] {
 const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dbu = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
+// Merge rows by a key, summing the given numeric fields. Rolls up the per-workspace
+// summary rows in Account mode (ws='') into one honest total; a no-op passthrough
+// for the common single-workspace case.
+function mergeByKey(items: Record<string, unknown>[], key: string, numKeys: string[]): Record<string, unknown>[] {
+  const m = new Map<string, Record<string, unknown>>();
+  for (const it of items) {
+    const k = toStr(it[key]);
+    const cur = m.get(k) || { [key]: k };
+    for (const nk of numKeys) cur[nk] = toNum(cur[nk]) + toNum(it[nk]);
+    m.set(k, cur);
+  }
+  return Array.from(m.values());
+}
+
 function CostConsumption() {
   const t = useT();
   const { ws } = useWorkspace();
@@ -51,21 +65,36 @@ function CostConsumption() {
 
   if (summaryQ.loading) return <p className="text-sm text-muted-foreground">…</p>;
 
-  const s = summaryQ.rows[0];
-  if (!s) {
+  // In Account mode (ws='') the query returns one latest row per workspace, so we
+  // aggregate across all rows rather than showing an arbitrary rows[0]. Single-ws
+  // is the common case (one row) and sums to itself.
+  const rows = summaryQ.rows;
+  const sum = (k: string) => rows.reduce((a, r) => a + toNum(r[k]), 0);
+  const windowDays = toNum(rows[0]?.window_days) || 30;
+  const multiWs = rows.length > 1;
+  const billedCost = sum('billed_cost_usd');
+  const billedDbus = sum('billed_dbus');
+  const freeDbus = sum('free_dbus');
+  const activeUsers = sum('active_users');
+  const codeFreeDbus = sum('code_free_dbus');
+  const codeBilledDbus = sum('code_billed_dbus');
+  const codeTotalDbus = sum('code_total_dbus');
+  const codeBilledCost = sum('code_billed_cost_usd');
+  const codeUsers = sum('code_users');
+
+  // No live/fixture row, or a real workspace with zero Genie usage → honest empty
+  // state (never the demo numbers). The collector always writes a row when billing
+  // resolves, so a genuine no-usage workspace lands here rather than on fixtures.
+  if (rows.length === 0 || billedDbus + freeDbus <= 0) {
     return <NotAvailable title={t('genie.cost.naTitle')} reason={t('genie.cost.naReason')} />;
   }
 
-  const windowDays = toNum(s.window_days) || 30;
-  const billedCost = toNum(s.billed_cost_usd);
-  const billedDbus = toNum(s.billed_dbus);
-  const freeDbus = toNum(s.free_dbus);
-  const activeUsers = toNum(s.active_users);
-  const surfaces = parseArr<SurfaceRow>(s.by_surface_json);
-  const trend = parseArr<TrendRow>(s.trend_json);
+  const surfaces = (mergeByKey(
+    rows.flatMap((r) => parseArr<Record<string, unknown>>(r.by_surface_json)),
+    'surface', ['list_cost', 'free_dbus', 'billed_dbus', 'dbus'],
+  ) as unknown as SurfaceRow[]).sort((a, b) => b.dbus - a.dbus);
 
   const maxDbus = Math.max(1, ...surfaces.map((x) => toNum(x.dbus)));
-  const maxTrend = Math.max(1, ...trend.map((x) => toNum(x.list_cost)));
 
   const kpis = [
     { icon: DollarSign, label: t('genie.cost.billedCost'), value: usd(billedCost), color: 'var(--domain-finops)' },
@@ -81,6 +110,9 @@ function CostConsumption() {
         <SourceBadge source={summaryQ.source} />
       </div>
       <p className="text-xs text-muted-foreground">{t('genie.cost.windowNote').replace('{d}', String(windowDays))}</p>
+      {multiWs && (
+        <p className="text-[11px] text-muted-foreground">{t('genie.cost.accountNote').replace('{n}', String(rows.length))}</p>
+      )}
 
       {/* KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -94,47 +126,53 @@ function CostConsumption() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Cost by surface — the split billing.usage lights up (Genie Code vs Agents). */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-semibold text-card-foreground">{t('genie.cost.bySurface')}</h3>
-          <p className="mb-3 text-[11px] text-muted-foreground">{t('genie.cost.surfaceNote')}</p>
-          <div className="space-y-2">
-            {surfaces.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
-            {surfaces.map((x) => (
-              <div key={x.surface}>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-card-foreground">{toStr(x.surface)}</span>
-                  <span className="tnum text-muted-foreground">{usd(toNum(x.list_cost))} · {dbu(toNum(x.dbus))} DBUs</span>
-                </div>
-                <div className="mt-1 h-2 w-full rounded-full bg-muted">
-                  <div
-                    className="h-2 rounded-full"
-                    style={{ width: `${Math.round((toNum(x.dbus) / maxDbus) * 100)}%`, background: 'var(--domain-genie)' }}
-                  />
-                </div>
-              </div>
-            ))}
+      {/* Genie Code focus — the surface that actually bills. */}
+      <div className="compass-enter rounded-xl border bg-card p-4" style={{ borderColor: 'var(--domain-genie)' }}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Code2 className="h-4 w-4" style={{ color: 'var(--domain-genie)' }} />
+            <h3 className="text-sm font-semibold text-card-foreground">{t('genie.cost.codeTitle')}</h3>
+          </div>
+          <span className="text-[11px] text-muted-foreground">{t('genie.cost.codeUsers').replace('{n}', String(codeUsers))}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-end gap-x-10 gap-y-3">
+          <div>
+            <p className="text-[11px] text-muted-foreground">{t('genie.cost.codeTotalDbus')}</p>
+            <p className="tnum text-2xl font-semibold text-card-foreground">{dbu(codeTotalDbus)}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {dbu(codeFreeDbus)} {t('genie.cost.free')} · {dbu(codeBilledDbus)} {t('genie.cost.billed')}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">{t('genie.cost.billedCost')}</p>
+            <p className="tnum text-2xl font-semibold" style={{ color: 'var(--domain-finops)' }}>{usd(codeBilledCost)}</p>
           </div>
         </div>
+      </div>
 
-        {/* Daily billed-cost trend */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-card-foreground">{t('genie.cost.trend')}</h3>
-          {trend.length === 0 ? (
-            <p className="text-xs text-muted-foreground">—</p>
-          ) : (
-            <div className="flex h-24 items-end gap-1">
-              {trend.map((x) => (
+      {/* Evolutionary cost over time — period filter + monthly/daily grain. */}
+      <GenieCostTrend ws={ws} />
+
+      {/* Cost by surface — the split billing.usage lights up (Genie Code vs Agents). */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="text-sm font-semibold text-card-foreground">{t('genie.cost.bySurface')}</h3>
+        <p className="mb-3 text-[11px] text-muted-foreground">{t('genie.cost.surfaceNote')}</p>
+        <div className="space-y-2">
+          {surfaces.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
+          {surfaces.map((x) => (
+            <div key={x.surface}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-card-foreground">{toStr(x.surface)}</span>
+                <span className="tnum text-muted-foreground">{usd(toNum(x.list_cost))} · {dbu(toNum(x.dbus))} DBUs</span>
+              </div>
+              <div className="mt-1 h-2 w-full rounded-full bg-muted">
                 <div
-                  key={x.usage_date}
-                  className="flex-1 rounded-t"
-                  title={`${toStr(x.usage_date)}: ${usd(toNum(x.list_cost))}`}
-                  style={{ height: `${Math.max(4, Math.round((toNum(x.list_cost) / maxTrend) * 100))}%`, background: 'var(--domain-finops)' }}
+                  className="h-2 rounded-full"
+                  style={{ width: `${Math.round((toNum(x.dbus) / maxDbus) * 100)}%`, background: 'var(--domain-genie)' }}
                 />
-              ))}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -150,23 +188,26 @@ function CostConsumption() {
                 <th className="py-1.5 pr-3 font-medium">{t('genie.cost.colSurface')}</th>
                 <th className="py-1.5 pr-3 text-right font-medium">{t('genie.cost.colFree')}</th>
                 <th className="py-1.5 pr-3 text-right font-medium">{t('genie.cost.colPaid')}</th>
+                <th className="py-1.5 pr-3 text-right font-medium">{t('genie.cost.colTotal')}</th>
                 <th className="py-1.5 pr-3 text-right font-medium">{t('genie.cost.colCost')}</th>
                 <th className="py-1.5 font-medium">{t('genie.cost.colStatus')}</th>
               </tr>
             </thead>
             <tbody>
               {usersQ.rows.length === 0 && (
-                <tr><td colSpan={6} className="py-2 text-muted-foreground">—</td></tr>
+                <tr><td colSpan={7} className="py-2 text-muted-foreground">—</td></tr>
               )}
               {usersQ.rows.map((r, i) => {
                 const over = toBool(r.over_allowance);
                 const limit = toNum(r.free_allowance_limit);
+                const totalDbus = toNum(r.free_dbus) + toNum(r.paid_dbus);
                 return (
                   <tr key={`${toStr(r.run_as_user)}-${i}`} className="border-t border-border/60">
                     <td className="py-1.5 pr-3 text-card-foreground">{toStr(r.run_as_user)}</td>
                     <td className="py-1.5 pr-3 text-muted-foreground">{toStr(r.genie_surface)}</td>
                     <td className="tnum py-1.5 pr-3 text-right text-muted-foreground">{dbu(toNum(r.free_dbus))}{limit > 0 ? ` / ${limit}` : ''}</td>
                     <td className="tnum py-1.5 pr-3 text-right text-muted-foreground">{dbu(toNum(r.paid_dbus))}</td>
+                    <td className="tnum py-1.5 pr-3 text-right text-card-foreground">{dbu(totalDbus)}</td>
                     <td className="tnum py-1.5 pr-3 text-right text-card-foreground">{usd(toNum(r.billed_cost_usd))}</td>
                     <td className="py-1.5">
                       {over ? (
@@ -204,6 +245,9 @@ export function Genie() {
         <NotAvailable title={t('genie.naTitle')} reason={data.reason || t('genie.naReason')} />
       )}
 
+      {/* Cost & Consumption — sourced from system.billing.usage (GENIE). */}
+      <CostConsumption />
+
       {!loading && data.available && (
         <>
           <p className="text-sm text-muted-foreground">
@@ -233,9 +277,6 @@ export function Genie() {
           </div>
         </>
       )}
-
-      {/* Cost & Consumption — sourced from system.billing.usage (GENIE). */}
-      <CostConsumption />
 
       <FindingsList domain="genie" />
     </div>

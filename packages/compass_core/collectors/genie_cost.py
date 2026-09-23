@@ -45,11 +45,15 @@ _PRICE_JOIN = """
 class GenieCostCollector:
     domain = "genie"
 
-    def __init__(self, workspace_id: str, window_days: int = 30, scan_id: str = "live", workspace_name: str = ""):
+    def __init__(self, workspace_id: str, window_days: int = 30, scan_id: str = "live",
+                 workspace_name: str = "", trend_lookback_days: int = 365):
         self.workspace_id = workspace_id
         self.workspace_name = workspace_name
         self.window_days = window_days
         self.scan_id = scan_id
+        # Longer daily series for the evolutionary cost chart (UI rolls up to month
+        # and filters by period client-side); independent of the KPI window.
+        self.trend_lookback_days = trend_lookback_days
 
     def _tag(self, f: Finding) -> Finding:
         f.workspace_id = self.workspace_id
@@ -89,9 +93,10 @@ class GenieCostCollector:
             return res
 
         s0 = summary_rows[0] if summary_rows else {}
-        # Nothing billed and nothing free means Genie is not in use here — skip.
-        if not s0 or (float(s0.get("billed_dbus") or 0) == 0 and float(s0.get("free_dbus") or 0) == 0):
-            return res
+        # We always write a summary row when the billing query resolved (even an
+        # all-zero one), so a real workspace with no Genie usage shows honest zeros
+        # from live data rather than falling back to the demo fixture. Only a failed
+        # billing query (handled in the except above) yields no row at all.
 
         def _safe(rows_fn):
             try:
@@ -100,15 +105,41 @@ class GenieCostCollector:
                 print(f"[compass] genie_cost breakdown skipped: {str(e)[:160]}")
                 return []
 
+        # Genie Code totals (the surface that actually bills) — free + billed DBUs,
+        # cost and distinct users over the same window as the headline KPIs.
+        code_rows = _safe(lambda: rows_as_dicts(
+            spark,
+            f"""
+            SELECT
+              ROUND(SUM(CASE WHEN u.sku_name = 'GENIE_FREE_USAGE' THEN u.usage_quantity ELSE 0 END), 2) AS code_free_dbus,
+              ROUND(SUM(CASE WHEN u.sku_name != 'GENIE_FREE_USAGE' THEN u.usage_quantity ELSE 0 END), 2) AS code_billed_dbus,
+              ROUND(SUM(u.usage_quantity), 2) AS code_total_dbus,
+              ROUND(SUM(CASE WHEN u.sku_name != 'GENIE_FREE_USAGE'
+                   THEN u.usage_quantity * {_LIST_COST} ELSE 0 END), 2) AS code_billed_cost_usd,
+              COUNT(DISTINCT u.identity_metadata.run_as) AS code_users
+            FROM system.billing.usage u
+            {_PRICE_JOIN}
+            WHERE {base} AND u.usage_metadata.genie.surface = 'GENIE_CODE'
+            """,
+        ))
+        c0 = code_rows[0] if code_rows else {}
+
+        # All Genie usage (free + billed) per surface, so free-only surfaces such
+        # as GENIE_AGENTS still appear and the bar reflects total consumption.
         by_surface = _safe(lambda: rows_as_dicts(
             spark,
             f"""
             SELECT COALESCE(u.usage_metadata.genie.surface, 'UNKNOWN') AS surface,
-                   ROUND(SUM(u.usage_quantity * {_LIST_COST}), 2) AS list_cost,
+                   ROUND(SUM(CASE WHEN u.sku_name != 'GENIE_FREE_USAGE'
+                        THEN u.usage_quantity * {_LIST_COST} ELSE 0 END), 2) AS list_cost,
+                   ROUND(SUM(CASE WHEN u.sku_name = 'GENIE_FREE_USAGE'
+                        THEN u.usage_quantity ELSE 0 END), 2) AS free_dbus,
+                   ROUND(SUM(CASE WHEN u.sku_name != 'GENIE_FREE_USAGE'
+                        THEN u.usage_quantity ELSE 0 END), 2) AS billed_dbus,
                    ROUND(SUM(u.usage_quantity), 2) AS dbus
             FROM system.billing.usage u {_PRICE_JOIN}
-            WHERE {billed}
-            GROUP BY 1 ORDER BY list_cost DESC
+            WHERE {base}
+            GROUP BY 1 ORDER BY dbus DESC
             """,
         ))
         by_channel = _safe(lambda: rows_as_dicts(
@@ -141,6 +172,33 @@ class GenieCostCollector:
             """,
         ))
 
+        # Long daily series (default 365d) for the evolutionary cost chart — the UI
+        # filters by period and rolls up to month client-side.
+        trend_long = _safe(lambda: rows_as_dicts(
+            spark,
+            f"""
+            SELECT CAST(u.usage_date AS STRING) AS usage_date,
+                   ROUND(SUM(CASE WHEN u.sku_name != 'GENIE_FREE_USAGE'
+                        THEN u.usage_quantity * {_LIST_COST} ELSE 0 END), 2) AS billed_cost_usd,
+                   ROUND(SUM(CASE WHEN u.sku_name != 'GENIE_FREE_USAGE'
+                        THEN u.usage_quantity ELSE 0 END), 2) AS billed_dbus,
+                   ROUND(SUM(CASE WHEN u.sku_name = 'GENIE_FREE_USAGE'
+                        THEN u.usage_quantity ELSE 0 END), 2) AS free_dbus
+            FROM system.billing.usage u {_PRICE_JOIN}
+            WHERE u.billing_origin_product = 'GENIE' AND u.workspace_id = '{ws}'
+              AND u.usage_date >= DATEADD(DAY, -{self.trend_lookback_days}, CURRENT_DATE())
+            GROUP BY 1 ORDER BY usage_date
+            """,
+        ))
+        res.inventory["genie_cost_trend"] = [
+            {"scan_id": self.scan_id, "workspace_id": ws, "workspace_name": self.workspace_name,
+             "usage_date": r.get("usage_date"),
+             "billed_cost_usd": float(r.get("billed_cost_usd") or 0.0),
+             "billed_dbus": float(r.get("billed_dbus") or 0.0),
+             "free_dbus": float(r.get("free_dbus") or 0.0)}
+            for r in trend_long
+        ]
+
         res.inventory["genie_cost_summary"] = [{
             "scan_id": self.scan_id,
             "workspace_id": ws,
@@ -150,6 +208,12 @@ class GenieCostCollector:
             "billed_dbus": float(s0.get("billed_dbus") or 0.0),
             "free_dbus": float(s0.get("free_dbus") or 0.0),
             "active_users": int(s0.get("active_users") or 0),
+            # Genie Code focus (the billing surface).
+            "code_free_dbus": float(c0.get("code_free_dbus") or 0.0),
+            "code_billed_dbus": float(c0.get("code_billed_dbus") or 0.0),
+            "code_total_dbus": float(c0.get("code_total_dbus") or 0.0),
+            "code_billed_cost_usd": float(c0.get("code_billed_cost_usd") or 0.0),
+            "code_users": int(c0.get("code_users") or 0),
             "by_surface_json": json.dumps(by_surface, default=str),
             "by_channel_json": json.dumps(by_channel, default=str),
             "by_sku_json": json.dumps(by_sku, default=str),
@@ -206,7 +270,7 @@ class GenieCostCollector:
         if over_allowance_users:
             billed_cost = float(s0.get("billed_cost_usd") or 0.0)
             res.findings.append(Finding(
-                id=f"{self.scan_id}-GEN-COST-001",
+                id=f"{self.scan_id}-{ws}-GEN-COST-001",
                 rule_id="GEN-COST-001",
                 domain="genie",
                 title="Genie Code users past the free allowance are billing",
