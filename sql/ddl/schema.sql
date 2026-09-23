@@ -60,6 +60,14 @@ CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.cost_detail (
   cost_usd DOUBLE, dbus DOUBLE, records BIGINT
 ) USING DELTA;
 
+-- Daily cost by product over a long lookback (default 365d) — the evolutionary
+-- cost chart with period filter + monthly/daily rollup (client-side).
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.cost_trend (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, usage_date STRING,
+  product STRING, cost_usd DOUBLE, dbus DOUBLE
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.cost_trend TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
 -- Immutable per-run snapshot (append-only) — trend/diff over time.
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.scan_runs (
   scan_id STRING, workspace_id STRING, workspace_name STRING, generated_at STRING,

@@ -28,11 +28,15 @@ _PRICE_JOIN = """
 class FinOpsCollector:
     domain = "finops"
 
-    def __init__(self, workspace_id: str, window_days: int = 30, scan_id: str = "live", workspace_name: str = ""):
+    def __init__(self, workspace_id: str, window_days: int = 30, scan_id: str = "live",
+                 workspace_name: str = "", trend_lookback_days: int = 365):
         self.workspace_id = workspace_id
         self.workspace_name = workspace_name
         self.window_days = window_days
         self.scan_id = scan_id
+        # Longer daily series for the evolutionary cost chart (UI filters by period
+        # and rolls up to month client-side); independent of the KPI window.
+        self.trend_lookback_days = trend_lookback_days
 
     def _tag(self, f: Finding) -> Finding:
         f.workspace_id = self.workspace_id
@@ -125,6 +129,37 @@ class FinOpsCollector:
             res.inventory["cost_detail"] = detail
         except Exception as e:  # pragma: no cover - depends on live schema
             print(f"[compass] cost_detail unavailable: {str(e)[:200]}")
+
+        # cost_trend — daily cost by product over a long lookback (default 365d)
+        # for the evolutionary chart. Best-effort: on error the chart just stays
+        # empty (KPIs/treemap still stand). Independent of the KPI window.
+        try:
+            trend = rows_as_dicts(
+                spark,
+                f"""
+                SELECT
+                  CAST(u.usage_date AS STRING) AS usage_date,
+                  u.billing_origin_product AS product,
+                  ROUND(SUM(u.usage_quantity * COALESCE(lp.pricing.effective_list.default, lp.pricing.default, 0)), 2) AS cost_usd,
+                  ROUND(SUM(u.usage_quantity), 2) AS dbus
+                FROM system.billing.usage u
+                {_PRICE_JOIN}
+                WHERE u.workspace_id = '{self.workspace_id}'
+                  AND u.usage_date >= DATEADD(DAY, -{self.trend_lookback_days}, CURRENT_DATE())
+                GROUP BY 1, 2
+                HAVING cost_usd > 0
+                ORDER BY usage_date
+                """,
+            )
+            res.inventory["cost_trend"] = [
+                {"scan_id": self.scan_id, "workspace_id": self.workspace_id,
+                 "workspace_name": self.workspace_name, "usage_date": r.get("usage_date"),
+                 "product": r.get("product"), "cost_usd": float(r.get("cost_usd") or 0.0),
+                 "dbus": float(r.get("dbus") or 0.0)}
+                for r in trend
+            ]
+        except Exception as e:  # pragma: no cover - depends on live schema
+            print(f"[compass] cost_trend unavailable: {str(e)[:200]}")
 
         total = sum(float(r["cost_usd"]) for r in summary) or 0.0
         unattributed = sum(

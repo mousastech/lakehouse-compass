@@ -101,6 +101,13 @@ const en: Dict = {
   'finops.allTags': 'All tags',
   'finops.resetFilters': 'Reset filters',
   'finops.viaOwner': '(via owner)',
+  'finops.windowNote': 'Costs over the last 30 days',
+  'finops.kpiHelp': 'Total = all spend in the window. AI/inference = model serving, vector search & real-time. Unattributed = billing rows with no run-as identity (warehouses, Apps, serverless jobs/pipelines, notebooks) — click it to see what is inside.',
+  'finops.unattrClick': 'click to drill',
+  'finops.unattrTitle': 'Inside unattributed spend',
+  'finops.unattrHelp': 'Rows with no run-as identity, resolved to an effective owner (owned_by / created_by). Mostly warehouses, Apps and serverless jobs — not unknown spend. Fix via cost tags + run-as service principals (FIN-027).',
+  'finops.trend.title': 'Cost over time',
+  'finops.trend.total': 'Total in period',
 
   'security.posture': 'Security posture',
   'security.score': 'Security score',
@@ -473,6 +480,13 @@ const ptBR: Dict = {
   'finops.allTags': 'Todas as tags',
   'finops.resetFilters': 'Limpar filtros',
   'finops.viaOwner': '(via dono)',
+  'finops.windowNote': 'Custos dos últimos 30 dias',
+  'finops.kpiHelp': 'Total = todo o gasto na janela. AI/inferência = model serving, vector search e tempo real. Não atribuído = linhas de billing sem identidade run-as (warehouses, Apps, jobs/pipelines serverless, notebooks) — clique para ver o que tem dentro.',
+  'finops.unattrClick': 'clique para detalhar',
+  'finops.unattrTitle': 'Dentro do gasto não atribuído',
+  'finops.unattrHelp': 'Linhas sem identidade run-as, resolvidas para um dono efetivo (owned_by / created_by). Em geral warehouses, Apps e jobs serverless — não é gasto desconhecido. Corrige com cost tags + run-as service principals (FIN-027).',
+  'finops.trend.title': 'Custo ao longo do tempo',
+  'finops.trend.total': 'Total no período',
 
   'security.posture': 'Postura de segurança',
   'security.score': 'Índice de segurança',
@@ -845,6 +859,13 @@ const es: Dict = {
   'finops.allTags': 'Todos los tags',
   'finops.resetFilters': 'Restablecer filtros',
   'finops.viaOwner': '(via propietario)',
+  'finops.windowNote': 'Costos de los últimos 30 días',
+  'finops.kpiHelp': 'Total = todo el gasto en la ventana. IA/inferencia = model serving, vector search y tiempo real. No atribuido = filas de billing sin identidad run-as (warehouses, Apps, jobs/pipelines serverless, notebooks) — haz clic para ver qué hay dentro.',
+  'finops.unattrClick': 'clic para desglosar',
+  'finops.unattrTitle': 'Dentro del gasto no atribuido',
+  'finops.unattrHelp': 'Filas sin identidad run-as, resueltas a un propietario efectivo (owned_by / created_by). Sobre todo warehouses, Apps y jobs serverless — no es gasto desconocido. Corrige con cost tags + run-as service principals (FIN-027).',
+  'finops.trend.title': 'Costo a lo largo del tiempo',
+  'finops.trend.total': 'Total en el período',
 
   'security.posture': 'Postura de seguridad',
   'security.score': 'Puntuación de seguridad',
@@ -1169,7 +1190,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { lang, setLang } = useI18n();
   const langs: Lang[] = ['en', 'pt-BR', 'es'];
   return (
-    <div className="flex gap-1">
+    <div className="flex flex-wrap justify-center gap-1">
       {langs.map((l) => (
         <button
           key={l}

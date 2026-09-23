@@ -5,9 +5,10 @@ import { useWorkspace } from '../lib/workspace';
 import { normCost } from '../lib/model';
 import { toStr, toNum } from '../lib/rows';
 import { useT } from '../lib/i18n';
-import { fmtUsd } from '../lib/format';
+import { fmtUsd, fmtDate } from '../lib/format';
 import { KpiCard } from '../components/KpiCard';
 import { Treemap, type TreemapItem } from '../components/Treemap';
+import { CostTrend } from '../components/CostTrend';
 
 const PALETTE = [
   '--domain-performance',
@@ -26,9 +27,12 @@ export function FinOps() {
   const { rows, loading, source } = useLiveRows('cost_summary', '/api/rows/cost_summary', ws);
   const cost = useMemo(() => rows.map(normCost), [rows]);
   const { rows: detailRows } = useLiveRows('cost_detail', '/api/rows/cost_detail', ws);
+  const trendQ = useLiveRows('trend', '/api/rows/trend', ws);
+  const lastScanAt = toStr(trendQ.rows[0]?.generated_at);
   const [selected, setSelected] = useState('');
   const [userFilter, setUserFilter] = useState('');
   const [tagFilter, setTagFilter] = useState('');
+  const [unattrOpen, setUnattrOpen] = useState(false);
 
   const parseTags = (v: unknown): Record<string, string> => {
     if (typeof v === 'string' && v.trim().startsWith('{')) {
@@ -108,6 +112,22 @@ export function FinOps() {
   const unattributed = cost.filter((c) => c.identity === '(unattributed)').reduce((a, c) => a + c.costUsd, 0);
   const unattributedPct = total > 0 ? Math.round((100 * unattributed) / total) : 0;
 
+  // What is inside "unattributed": the cost_detail rows with no run-as identity,
+  // grouped by resource + effective owner (owned_by/created_by) — usually
+  // warehouses, Apps, jobs/pipelines serverless and notebooks.
+  const unattrDetail = useMemo(() => {
+    const m = new Map<string, { product: string; resourceType: string; resourceName: string; owner: string; cost: number; dbus: number }>();
+    for (const d of detail) {
+      if (d.identity !== '(unattributed)') continue;
+      const key = `${d.product}|${d.resourceType}|${d.resourceName}|${d.owner}`;
+      const cur = m.get(key) || { product: d.product, resourceType: d.resourceType, resourceName: d.resourceName, owner: d.owner, cost: 0, dbus: 0 };
+      cur.cost += d.costUsd;
+      cur.dbus += d.dbus;
+      m.set(key, cur);
+    }
+    return [...m.values()].sort((a, b) => b.cost - a.cost);
+  }, [detail]);
+
   const byProduct = useMemo(() => {
     const m = new Map<string, number>();
     for (const c of cost) m.set(c.product, (m.get(c.product) ?? 0) + c.costUsd);
@@ -143,17 +163,26 @@ export function FinOps() {
         </span>
       </div>
 
+      <p className="-mt-2 text-xs text-muted-foreground">
+        {t('finops.windowNote')}{lastScanAt ? ` · ${t('meta.lastScan')}: ${fmtDate(lastScanAt)}` : ''}
+      </p>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard label={t('finops.totalSpend')} value={fmtUsd(total)} accentVar="--domain-finops" icon={<DollarSign className="h-4 w-4" />} />
         <KpiCard label={t('finops.aiSpend')} value={fmtUsd(ai)} sub={`${total ? Math.round((100 * ai) / total) : 0}% of total`} accentVar="--domain-ai_estate" icon={<Cpu className="h-4 w-4" />} />
-        <KpiCard
-          label={t('finops.unattributed')}
-          value={fmtUsd(unattributed)}
-          sub={`${unattributedPct}% of total`}
-          accentVar="--sev-high"
-          icon={<UserX className="h-4 w-4" />}
-        />
+        <button type="button" onClick={() => setUnattrOpen((v) => !v)} className="w-full text-left" title={t('finops.unattrClick')}>
+          <KpiCard
+            label={t('finops.unattributed')}
+            value={fmtUsd(unattributed)}
+            sub={`${unattributedPct}% · ${t('finops.unattrClick')}`}
+            accentVar="--sev-high"
+            icon={<UserX className="h-4 w-4" />}
+          />
+        </button>
       </div>
+      <p className="text-xs text-muted-foreground">{t('finops.kpiHelp')}</p>
+
+      <CostTrend ws={ws} />
 
       <section className="rounded-xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -168,6 +197,58 @@ export function FinOps() {
           <Treemap items={treemapItems} height={260} onSelect={selectProduct} selected={selected} />
         )}
       </section>
+
+      {unattrOpen && (
+        <section className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-card-foreground">
+              {t('finops.unattrTitle')}
+              <span className="ml-2 text-xs font-normal text-muted-foreground">{fmtUsd(unattributed)} · {unattributedPct}%</span>
+            </h2>
+            <button
+              type="button"
+              onClick={() => setUnattrOpen(false)}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-accent"
+            >
+              <X className="h-3.5 w-3.5" /> {t('finops.clear')}
+            </button>
+          </div>
+          <p className="mb-3 text-[11px] text-muted-foreground">{t('finops.unattrHelp')}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="py-2 pr-3 font-medium">{t('finops.col.resource')}</th>
+                  <th className="py-2 pr-3 font-medium">{t('finops.col.owner')}</th>
+                  <th className="py-2 pr-3 text-right font-medium">{t('finops.col.dbus')}</th>
+                  <th className="py-2 text-right font-medium">{t('finops.col.cost')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unattrDetail.length === 0 ? (
+                  <tr><td colSpan={4} className="py-4 text-center text-sm text-muted-foreground">{t('finops.drillNone')}</td></tr>
+                ) : (
+                  unattrDetail.map((d, i) => (
+                    <tr key={`${d.resourceName}-${i}`} className="border-b border-border/60">
+                      <td className="py-2 pr-3">
+                        <span className="text-card-foreground">{d.resourceName}</span>
+                        <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">{d.resourceType}</span>
+                        <div className="text-[11px] text-muted-foreground">{d.product}</div>
+                      </td>
+                      <td className="py-2 pr-3 text-muted-foreground">
+                        {d.owner || '—'}
+                        {d.owner && <span className="ml-1 text-[10px] text-muted-foreground">{t('finops.viaOwner')}</span>}
+                      </td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{Math.round(d.dbus).toLocaleString()}</td>
+                      <td className="py-2 text-right tabular-nums text-card-foreground">{fmtUsd(d.cost)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {selected && (
         <section className="rounded-xl border border-border bg-card p-4">

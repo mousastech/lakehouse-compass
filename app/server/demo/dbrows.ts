@@ -402,6 +402,32 @@ export const genieCostTrendRows = Array.from({ length: 365 }, (_, k) => {
   };
 });
 
+// FinOps cost evolutionary series — 365 daily points × a few products (mirrors
+// cost_trend), deterministic for a stable demo view.
+export const costTrendRows = (() => {
+  const products = [
+    { product: 'APPS', base: 55, amp: 20 },
+    { product: 'LAKEBASE', base: 30, amp: 12 },
+    { product: 'SQL', base: 18, amp: 10 },
+    { product: 'JOBS', base: 12, amp: 8 },
+    { product: 'MODEL_SERVING', base: 6, amp: 5 },
+  ];
+  const rows: Record<string, unknown>[] = [];
+  for (let k = 0; k < 365; k++) {
+    const i = 364 - k; // days ago (oldest first)
+    const ramp = i > 180 ? 0.5 : i > 90 ? 0.8 : 1.3;
+    for (const p of products) {
+      const cost = Math.round((p.base * ramp + p.amp * Math.abs(Math.sin((i + p.base) / 11))) * 100) / 100;
+      rows.push({
+        workspace_id: '7474658545709121', workspace_name: 'moi-ai',
+        usage_date: isoInDays(-i), product: p.product,
+        cost_usd: cost, dbus: Math.round(cost * 1.4 * 100) / 100,
+      });
+    }
+  }
+  return rows;
+})();
+
 function isoInDays(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);

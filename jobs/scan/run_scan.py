@@ -112,6 +112,10 @@ def _schemas():
             S("identity"), S("resource_type"), S("resource_name"), S("owner"), S("tags_json"),
             S("cost_usd", DoubleType()), S("dbus", DoubleType()), S("records", LongType()),
         ]),
+        "cost_trend": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("usage_date"),
+            S("product"), S("cost_usd", DoubleType()), S("dbus", DoubleType()),
+        ]),
         "scan_runs": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("generated_at"),
             S("overall_score", DoubleType()), S("coverage_pct", DoubleType()),
@@ -384,6 +388,7 @@ def run_live(args) -> None:
         capabilities += fin.capabilities
         cost_rows = fin.inventory.get("cost_summary", [])
         cost_detail_rows = fin.inventory.get("cost_detail", [])
+        cost_trend_rows = fin.inventory.get("cost_trend", [])
 
         # Genie cost & consumption — billing.usage (GENIE), runs for every ws.
         gcost = GenieCostCollector(workspace_id=ws, window_days=args.window_days, scan_id=scan_id, workspace_name=ws_name).collect(spark)
@@ -613,6 +618,14 @@ def run_live(args) -> None:
                      "cost_usd": float(r.get("cost_usd") or 0.0), "dbus": float(r.get("dbus") or 0.0),
                      "records": int(r.get("records") or 0)}
                     for r in cost_detail_rows])
+
+        if cost_trend_rows:
+            _write(spark, fq, "cost_trend",
+                   [{"scan_id": scan_id, "workspace_id": r.get("workspace_id") or ws,
+                     "workspace_name": r.get("workspace_name") or ws_name,
+                     "usage_date": r.get("usage_date"), "product": r.get("product"),
+                     "cost_usd": float(r.get("cost_usd") or 0.0), "dbus": float(r.get("dbus") or 0.0)}
+                    for r in cost_trend_rows])
 
         domain_scores_json = json.dumps({d.domain: d.score for d in score.domains})
         _write(spark, fq, "scan_runs",
