@@ -67,6 +67,24 @@ export function Observability() {
     return s.size;
   }, [detailQ.rows]);
 
+  // Who is using — consumption ranked by effective identity (run-as, or owner
+  // when the row is unattributed).
+  const whoUsing = useMemo(() => {
+    const m = new Map<string, { cost: number; dbus: number; viaOwner: boolean }>();
+    for (const r of detailQ.rows) {
+      const id = toStr(r.identity); const owner = toStr(r.owner);
+      const via = (!id || id === '(unattributed)') && !!owner;
+      const eff = id && id !== '(unattributed)' ? id : (owner || '(unattributed)');
+      const cur = m.get(eff) || { cost: 0, dbus: 0, viaOwner: via };
+      cur.cost += toNum(r.cost_usd); cur.dbus += toNum(r.dbus);
+      m.set(eff, cur);
+    }
+    return Array.from(m.entries())
+      .map(([identity, v]) => ({ identity, cost: v.cost, dbus: v.dbus, viaOwner: v.viaOwner }))
+      .sort((a, b) => b.cost - a.cost).slice(0, 12);
+  }, [detailQ.rows]);
+  const maxWho = Math.max(1, ...whoUsing.map((w) => w.cost));
+
   const treemapItems: TreemapItem[] = byProduct.map((p, i) => ({
     label: p.label, value: p.value, colorVar: PALETTE[i % PALETTE.length], detail: fmtUsd(p.value),
   }));
@@ -184,6 +202,28 @@ export function Observability() {
             </div>
           </div>
         )}
+      </section>
+
+      {/* Quem está usando */}
+      <section className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground"><Users className="h-4 w-4" style={{ color: 'var(--primary)' }} /> {t('obs.who')}</h2>
+        <p className="text-xs text-muted-foreground">{t('obs.whoHelp')}</p>
+        <div className="rounded-xl border border-border bg-card p-4">
+          {whoUsing.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
+          <div className="space-y-2">
+            {whoUsing.map((w) => (
+              <div key={w.identity}>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate text-card-foreground">{w.identity}{w.viaOwner ? ` ${t('obs.whoVia')}` : ''}</span>
+                  <span className="tnum shrink-0 text-muted-foreground">{fmtUsd(w.cost)} · {w.dbus.toLocaleString(undefined, { maximumFractionDigits: 1 })} DBUs</span>
+                </div>
+                <div className="mt-1 h-2 w-full rounded-full bg-muted">
+                  <div className="h-2 rounded-full" style={{ width: `${Math.round((w.cost / maxWho) * 100)}%`, background: 'var(--primary)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Inventário do que roda */}
