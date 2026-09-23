@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router';
-import { DollarSign, ShieldCheck, Wrench, Sparkles, ArrowUpRight, Wifi, WifiOff } from 'lucide-react';
+import { DollarSign, ShieldCheck, Wrench, Sparkles, ArrowUpRight, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useLiveRows } from '../lib/analytics';
 import { useApi } from '../lib/api';
 import { useWorkspace } from '../lib/workspace';
@@ -15,6 +16,21 @@ import type { DomainScore } from '../lib/api';
 
 export function Overview() {
   const t = useT();
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState('');
+
+  const runScan = async () => {
+    setScanning(true);
+    setScanMsg('');
+    try {
+      const r = await fetch('/api/scan/run', { method: 'POST' });
+      setScanMsg(r.ok ? t('overview.scanStarted') : t('overview.scanFailed'));
+    } catch {
+      setScanMsg(t('overview.scanFailed'));
+    } finally {
+      setScanning(false);
+    }
+  };
   const { ws } = useWorkspace();
   const scores = useLiveRows('scores', '/api/rows/scores', ws);
   const findings = useLiveRows('findings', '/api/rows/findings', ws);
@@ -81,6 +97,15 @@ export function Overview() {
           </span>
           <button
             type="button"
+            onClick={runScan}
+            disabled={scanning}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${scanning ? 'animate-spin' : ''}`} style={{ color: 'var(--domain-finops)' }} />
+            {scanning ? t('overview.scanning') : t('overview.runScan')}
+          </button>
+          <button
+            type="button"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent"
           >
             <Sparkles className="h-4 w-4" style={{ color: 'var(--primary)' }} />
@@ -88,6 +113,7 @@ export function Overview() {
           </button>
         </div>
       </div>
+      {scanMsg && <p className="text-xs text-muted-foreground">{scanMsg}</p>}
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="compass-enter flex items-center justify-center rounded-2xl border border-border bg-card p-6">

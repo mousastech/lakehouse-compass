@@ -53,6 +53,10 @@ const en: Dict = {
   'overview.overdue': 'Overdue',
   'overview.topFindings': 'Top findings',
   'overview.askCompass': 'Ask Compass',
+  'overview.runScan': 'Run scan',
+  'overview.scanning': 'Starting…',
+  'overview.scanStarted': 'Scan started — it runs on serverless and refreshes the tables in ~1–3 min. Reload to see the update.',
+  'overview.scanFailed': 'Could not start the scan (check the app service principal has CAN_MANAGE_RUN on the scan job).',
   'overview.present': 'Present',
   'overview.viewAll': 'View all',
 
@@ -421,6 +425,10 @@ const ptBR: Dict = {
   'overview.overdue': 'Atrasado',
   'overview.topFindings': 'Principais achados',
   'overview.askCompass': 'Perguntar ao Compass',
+  'overview.runScan': 'Rodar scan',
+  'overview.scanning': 'Iniciando…',
+  'overview.scanStarted': 'Scan iniciado — roda em serverless e atualiza as tabelas em ~1–3 min. Recarregue para ver.',
+  'overview.scanFailed': 'Não consegui iniciar o scan (confira se o service principal do app tem CAN_MANAGE_RUN no job de scan).',
   'overview.present': 'Apresentar',
   'overview.viewAll': 'Ver todos',
 
@@ -789,6 +797,10 @@ const es: Dict = {
   'overview.overdue': 'Vencido',
   'overview.topFindings': 'Principales hallazgos',
   'overview.askCompass': 'Preguntar a Compass',
+  'overview.runScan': 'Ejecutar scan',
+  'overview.scanning': 'Iniciando…',
+  'overview.scanStarted': 'Scan iniciado — corre en serverless y actualiza las tablas en ~1–3 min. Recarga para verlo.',
+  'overview.scanFailed': 'No se pudo iniciar el scan (verifica que el service principal de la app tenga CAN_MANAGE_RUN en el job de scan).',
   'overview.present': 'Presentar',
   'overview.viewAll': 'Ver todos',
 

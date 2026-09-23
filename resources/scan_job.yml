@@ -7,6 +7,11 @@ resources:
         project: lakehouse-compass
         phase: "0"
 
+      # Let the app's service principal trigger this job (on-demand "Run scan" button).
+      permissions:
+        - level: CAN_MANAGE_RUN
+          service_principal_name: ${var.app_service_principal}
+
       # Weekly check-up cadence (paused by default in Phase 0).
       schedule:
         quartz_cron_expression: "0 0 6 ? * MON"

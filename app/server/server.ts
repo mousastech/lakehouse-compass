@@ -5,6 +5,7 @@ import { setupAgentRoutes } from './agent/agent-routes';
 import { setupSelfCheckRoutes } from './routes/selfcheck-routes';
 import { setupDiscoveryRoutes } from './routes/discovery-routes';
 import { setupHistoryRoutes } from './routes/history-routes';
+import { setupScanRoutes } from './routes/scan-routes';
 
 // Phase 0: server plugin only. It binds 0.0.0.0 on DATABRICKS_APP_PORT, serves
 // the built client from client/dist with SPA fallback, and handles graceful
@@ -25,6 +26,7 @@ createApp({
     setupSelfCheckRoutes(appkit);
     setupDiscoveryRoutes(appkit);
     setupHistoryRoutes(appkit);
+    setupScanRoutes(appkit);
     await appkit.server.start();
   })
   .catch((err) => {
