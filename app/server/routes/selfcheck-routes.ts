@@ -5,8 +5,10 @@ interface AppKitServer {
   server: { extend(fn: (app: Application) => void): void };
 }
 
-const CAT = 'moi_ai_catalog.lakehouse_compass';
-const APP_SP = '9e5eaa76-9282-4a5a-be66-41397adf8313';
+import { CAT } from '../catalog';
+// The app's own service principal — Databricks Apps expose it as DATABRICKS_CLIENT_ID;
+// COMPASS_APP_SP overrides, and the fevm SP is the last-resort default.
+const APP_SP = process.env.COMPASS_APP_SP || process.env.DATABRICKS_CLIENT_ID || '9e5eaa76-9282-4a5a-be66-41397adf8313';
 
 interface SelfCheckItem {
   id: string;

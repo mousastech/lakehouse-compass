@@ -500,6 +500,42 @@ party/internal IP), unlike the FinOpsApp evaluation which stays blocked.
 engine (all-purpose-for-jobs migration, savings bands, Next Best Action) —
 agreed to follow this Genie increment.
 
+## D22 — Multi-workspace portability: parameterize catalog + targets ✅
+
+**Context.** Compass was wired to fevm-moi-ai: `moi_ai_catalog.lakehouse_compass`
+hardcoded across ~44 files, single DAB target. Goal: deploy to other workspaces
+(first engie-noprod) and, per the product vision, run in **any** workspace.
+
+**Decision.** Parameterize the catalog end-to-end (schema stays `lakehouse_compass`):
+- **Jobs** already took `--catalog/--schema`; the resource YAMLs now pass DAB
+  variables (`compass_catalog`, `compass_schema`, `compass_workspace_id`,
+  `app_service_principal`) instead of hardcoded values.
+- **App server** (`app/server/catalog.ts`) is the single source: `CAT` /
+  `REPORTS_PREFIX` resolve the catalog as **COMPASS_CATALOG env → per-workspace map
+  keyed on DATABRICKS_HOST → moi_ai_catalog default**. The 5 hardcoded server files
+  import from it; the self-check SP reads `DATABRICKS_CLIENT_ID`.
+- **App query layer** (`config/queries/*.sql`, read literally by the analytics
+  plugin): a prebuild step `scripts/resolve-catalog.mjs` rewrites the catalog to
+  match (same resolution) before `npm run build`.
+- **Why a DATABRICKS_HOST map, not app.yaml/DAB var:** Databricks Apps env comes
+  only from the static, shared `app.yaml` (DAB cannot template it per target, and
+  the apps resource does not carry env). The host map lets one repo serve every
+  target with no per-target file; add a workspace by adding one entry (or setting
+  COMPASS_CATALOG). Jobs use the DAB var; app uses the host map — both resolve to
+  the same catalog per workspace.
+
+**engie target (engie-noprod).** No `main` catalog exists there, so Compass uses a
+dedicated schema in the managed EEP catalog:
+`noprod_eep_electricity_utilities_storage.lakehouse_compass`, warehouse
+`sql-general` (51b88986b238ab3f), workspace_id 7474645253477488. Verified: fevm
+`dev` still builds and runs unchanged (host map → moi_ai_catalog, resolve = no-op).
+
+**Deploy prerequisites (engie, not yet executed):** create the schema; deploy
+bundle (`-t engie -p engie-noprod`); grant the engie app SP USE CATALOG/USE
+SCHEMA/SELECT + set `app_service_principal`; run `compass_scan` then `compass_app`.
+The serving endpoint `databricks-claude-sonnet-4-5` (Compass Agent) must exist in
+the workspace or the app resource binding needs adjusting.
+
 ## Deferred to later phases
 - ⏭️ **Lakebase app state** (exceptions, approvals, checklist assignments,
   maintenance tasks, agent memory, preferences) — Phase 1/2. Schema/roles per

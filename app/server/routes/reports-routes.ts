@@ -1,4 +1,5 @@
 import type { Application, Request, Response } from 'express';
+import { REPORTS_PREFIX } from '../catalog';
 
 interface AppKitServer {
   server: { extend(fn: (app: Application) => void): void };
@@ -43,7 +44,6 @@ async function findReportJobId(host: string, token: string): Promise<number | nu
 }
 
 // Only files under this Volume prefix may be streamed (no path traversal).
-const REPORTS_PREFIX = '/Volumes/moi_ai_catalog/lakehouse_compass/reports/';
 
 /**
  * POST /api/reports/generate — triggers the premium PDF report job for a

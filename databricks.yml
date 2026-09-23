@@ -10,11 +10,20 @@ include:
 
 variables:
   sql_warehouse_id:
-    description: SQL Warehouse the app uses to read moi_ai_catalog.lakehouse_compass.* Delta.
+    description: SQL Warehouse the app uses to read <catalog>.lakehouse_compass.* Delta.
     default: 4e6fdb0b5307a9f1
   compass_catalog:
-    description: Catalog holding the lakehouse_compass schema (main is not accessible in this workspace).
+    description: Catalog holding the lakehouse_compass schema (per workspace; main is not always accessible).
     default: moi_ai_catalog
+  compass_schema:
+    description: Schema holding the Compass tables.
+    default: lakehouse_compass
+  compass_workspace_id:
+    description: Numeric id of the workspace the scan/report/digest jobs target.
+    default: "7474658545709121"
+  app_service_principal:
+    description: The Compass app's service principal (grants + report-job CAN_MANAGE_RUN). Set per target after the app's first deploy.
+    default: 9e5eaa76-9282-4a5a-be66-41397adf8313
 
 targets:
   # dev is the default target for Phase 0 work.
@@ -40,3 +49,16 @@ targets:
     permissions:
       - level: CAN_MANAGE
         user_name: ${workspace.current_user.userName}
+
+  # Engie Brasil noprod (engie-noprod). No `main` catalog here → Compass uses a
+  # dedicated schema in the managed EEP catalog. Set app_service_principal after
+  # the app's first deploy so the report job and grants target the right SP.
+  engie:
+    mode: development
+    workspace:
+      host: https://engie-noprod.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      compass_catalog: noprod_eep_electricity_utilities_storage
+      compass_workspace_id: "7474645253477488"
+      sql_warehouse_id: 51b88986b238ab3f

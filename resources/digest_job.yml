@@ -20,11 +20,11 @@ resources:
             python_file: ../jobs/digest/run_digest.py
             parameters:
               - "--catalog"
-              - "moi_ai_catalog"
+              - "${var.compass_catalog}"
               - "--schema"
-              - "lakehouse_compass"
+              - "${var.compass_schema}"
               - "--workspace_id"
-              - "7474658545709121"
+              - "${var.compass_workspace_id}"
           environment_key: compass_env
 
       environments:

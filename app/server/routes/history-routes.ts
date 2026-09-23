@@ -5,7 +5,7 @@ interface AppKitServer {
   server: { extend(fn: (app: Application) => void): void };
 }
 
-const CAT = 'moi_ai_catalog.lakehouse_compass';
+import { CAT } from '../catalog';
 const SCAN_ID = /^[A-Za-z0-9._-]{1,64}$/;
 
 /**

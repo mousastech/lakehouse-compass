@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { runSql } from '../lib/dbx';
 
-const CAT = 'moi_ai_catalog.lakehouse_compass';
+import { CAT } from '../catalog';
 
 // Static rule catalog (mirrors packages/compass_core/rules/definitions/*.yaml) for
 // get_rule / search_docs — the only place the agent may surface docs URLs.

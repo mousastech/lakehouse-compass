@@ -6,7 +6,7 @@ interface AppKitServer {
   server: { extend(fn: (app: Application) => void): void };
 }
 
-const CAT = 'moi_ai_catalog.lakehouse_compass';
+import { CAT } from '../catalog';
 const MAX_STEPS = 5;
 const MAX_TOKENS = 1024;
 

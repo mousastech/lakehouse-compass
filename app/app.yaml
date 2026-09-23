@@ -7,7 +7,7 @@
 command:
   - sh
   - -c
-  - 'if [ ! -d node_modules ]; then npm ci || npm install; fi; npm run build && npm start'
+  - 'if [ ! -d node_modules ]; then npm ci || npm install; fi; node scripts/resolve-catalog.mjs; npm run build && npm start'
 env:
   # SQL warehouse for the analytics plugin (reads the scan job's Delta output).
   - name: DATABRICKS_WAREHOUSE_ID
@@ -16,9 +16,9 @@ env:
   # empty/absent. Set to "true" to force fixtures only.
   - name: COMPASS_DEMO_MODE
     value: "false"
-  # Catalog holding the lakehouse_compass schema.
-  - name: COMPASS_CATALOG
-    value: "moi_ai_catalog"
+  # Catalog holding the lakehouse_compass schema is resolved per-workspace from
+  # DATABRICKS_HOST (see app/server/catalog.ts + scripts/resolve-catalog.mjs).
+  # Set COMPASS_CATALOG here only to force a specific catalog for all deployments.
   # Compass Agent — Unity AI Gateway–governed serving endpoint (bound as compass-llm).
   - name: COMPASS_LLM_ENDPOINT
     value: "databricks-claude-sonnet-4-5"
