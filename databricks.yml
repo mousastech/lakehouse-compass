@@ -7,6 +7,8 @@ bundle:
 
 include:
   - resources/*.yml
+  # Optional, gitignored: customer-specific targets (never committed to this public repo).
+  - "*.local.yml"
 
 variables:
   sql_warehouse_id:
@@ -50,15 +52,5 @@ targets:
       - level: CAN_MANAGE
         user_name: ${workspace.current_user.userName}
 
-  # Engie Brasil noprod (engie-noprod). No `main` catalog here → Compass uses a
-  # dedicated schema in the managed EEP catalog. Set app_service_principal after
-  # the app's first deploy so the report job and grants target the right SP.
-  engie:
-    mode: development
-    workspace:
-      host: https://engie-noprod.cloud.databricks.com
-      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
-    variables:
-      compass_catalog: noprod_eep_electricity_utilities_storage
-      compass_workspace_id: "7474645253477488"
-      sql_warehouse_id: 51b88986b238ab3f
+  # Customer-specific targets (e.g. engie-noprod) live in a gitignored
+  # databricks.local.yml so this public repo carries only generic config.

@@ -8,3 +8,5 @@ dist/
 client/dist/
 .env
 .pytest_cache/
+# Customer-specific bundle targets (host, workspace id, SP, catalog) — never public.
+*.local.yml
