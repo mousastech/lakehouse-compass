@@ -133,6 +133,13 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("entity"), S("queries", LongType()),
             S("avg_ms", DoubleType()), S("max_ms", DoubleType()),
         ]),
+        "compute_inventory": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("kind"), S("compute_id"),
+            S("name"), S("size"), S("serverless", BooleanType()), S("auto_stop_min", LongType()),
+            S("min_clusters", LongType()), S("max_clusters", LongType()), S("dbr_version"),
+            S("state"), S("owner"), S("queries_30d", LongType()), S("avg_ms", DoubleType()),
+            S("p90_ms", DoubleType()), S("dbus_30d", DoubleType()), S("cost_usd_30d", DoubleType()),
+        ]),
         "usage_heatmap": StructType([
             S("scan_id"), S("workspace_id"), S("dow", LongType()), S("hour", LongType()), S("n", LongType()),
         ]),
@@ -401,10 +408,14 @@ def run_live(args) -> None:
         gov_metrics = gov.inventory.get("governance_metrics", [])
         semantic_readiness = gov.semantic_readiness
 
-        perf = PerformanceCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect(spark)
+        # Warehouse config comes from the SDK REST API (local workspace only, like
+        # Genie/Lakebase); clusters/cost/utilization come from system tables for any ws.
+        perf = PerformanceCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name,
+                                    rest=(rest if is_local else None)).collect(spark)
         findings += perf.findings
         capabilities += perf.capabilities
         perf_summary = perf.inventory.get("perf_summary", [])
+        compute_inventory = perf.inventory.get("compute_inventory", [])
 
         usg = UsageCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect(spark)
         findings += usg.findings
@@ -560,6 +571,8 @@ def run_live(args) -> None:
             _write(spark, fq, "governance_metrics", gov_metrics)
         if perf_summary:
             _write(spark, fq, "perf_summary", perf_summary)
+        if compute_inventory:
+            _write(spark, fq, "compute_inventory", compute_inventory)
         if usage_heatmap:
             _write(spark, fq, "usage_heatmap", usage_heatmap)
         if usage_summary:

@@ -113,6 +113,13 @@ export const perfSummaryRows = [
   { entity: 'alexandre.zago@demo', queries: 19, avg_ms: 10018, max_ms: 60000, workspace_id: '7474658545709121' },
 ];
 
+// Compute inventory (mirrors moi_ai_catalog.lakehouse_compass.compute_inventory).
+export const computeInventoryRows = [
+  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', kind: 'warehouse', compute_id: '4e6fdb0b5307a9f1', name: 'Serverless Starter', size: 'Small', serverless: true, auto_stop_min: 10, min_clusters: 1, max_clusters: 1, dbr_version: '', state: 'RUNNING', owner: '', queries_30d: 1373, avg_ms: 5861, p90_ms: 12712, dbus_30d: 118.4, cost_usd_30d: 82.9 },
+  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', kind: 'warehouse', compute_id: '01bc171682ee8634', name: 'analytics-classic', size: '2X-Small', serverless: false, auto_stop_min: 0, min_clusters: 1, max_clusters: 2, dbr_version: '', state: 'STOPPED', owner: '', queries_30d: 418, avg_ms: 7437, p90_ms: 10113, dbus_30d: 20.0, cost_usd_30d: 14.0 },
+  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', kind: 'cluster', compute_id: '0921-abc-interactive', name: 'ds-shared', size: '', serverless: null, auto_stop_min: 0, min_clusters: 2, max_clusters: 8, dbr_version: '12.2.x-scala2.12', state: '', owner: 'ana.silva@demo', queries_30d: 0, avg_ms: 0, p90_ms: 0, dbus_30d: 55.3, cost_usd_30d: 41.2 },
+];
+
 export const usageSummaryRows = [
   { metric: 'active_users_30d', value: 49, workspace_id: '7474658545709121' },
   { metric: 'dau', value: 2, workspace_id: '7474658545709121' },

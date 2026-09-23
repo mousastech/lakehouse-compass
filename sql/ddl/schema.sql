@@ -135,6 +135,16 @@ CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_cost_trend (
 ) USING DELTA;
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_cost_trend TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 
+-- Compute inventory — SQL warehouses + interactive clusters with config/health,
+-- 30-day cost and utilization (append per scan).
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.compute_inventory (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, kind STRING, compute_id STRING,
+  name STRING, size STRING, serverless BOOLEAN, auto_stop_min BIGINT,
+  min_clusters BIGINT, max_clusters BIGINT, dbr_version STRING, state STRING, owner STRING,
+  queries_30d BIGINT, avg_ms DOUBLE, p90_ms DOUBLE, dbus_30d DOUBLE, cost_usd_30d DOUBLE
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.compute_inventory TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
 -- Generated diagnostic reports (append) — one row per PDF.
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.checkup_reports (
   report_id STRING, scan_id STRING, workspace_id STRING, workspace_name STRING, generated_at STRING,

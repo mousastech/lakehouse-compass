@@ -19,3 +19,83 @@ rules:
       warehouse; add liquid clustering / Z-ordering on hot tables.
     docs:
       - https://docs.databricks.com/sql/admin/warehouse-monitoring.html
+
+  - id: PERF-020
+    domain: performance
+    title: SQL warehouse without auto-stop
+    description: >
+      A SQL warehouse with no auto-stop keeps billing while idle. Auto-stop
+      releases idle compute automatically.
+    severity: medium
+    level: RECOMMENDED
+    requires: [query]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      An idle warehouse without auto-stop bills around the clock. Set an auto-stop
+      (e.g. 10 minutes) so it releases compute when not in use.
+    remediation: >
+      Configure auto-stop on the warehouse (Admin Settings > SQL Warehouses) to a
+      short idle window appropriate to the workload.
+    docs:
+      - https://docs.databricks.com/compute/sql-warehouse/warehouse-behavior.html
+
+  - id: PERF-021
+    domain: performance
+    title: Classic SQL warehouse (serverless opportunity)
+    description: >
+      Classic (non-serverless) SQL warehouses incur startup latency and idle
+      cost that Serverless SQL avoids with instant start and no idle billing.
+    severity: low
+    level: CONTEXT_DEPENDENT
+    requires: [query]
+    frameworks: []
+    waf_pillars: [cost_optimization, performance_efficiency]
+    agent_explainer: >
+      Serverless SQL warehouses start instantly and don't bill while idle. Where
+      supported, moving classic warehouses to serverless removes startup and idle cost.
+    remediation: >
+      Evaluate migrating classic SQL warehouses to Serverless SQL where the
+      workload and region support it.
+    docs:
+      - https://docs.databricks.com/compute/sql-warehouse/serverless.html
+
+  - id: PERF-022
+    domain: performance
+    title: Interactive cluster without auto-termination
+    description: >
+      An all-purpose/interactive cluster without auto-termination keeps billing
+      while idle.
+    severity: medium
+    level: RECOMMENDED
+    requires: [compute]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      Idle interactive clusters without auto-termination waste spend. Enable
+      auto-termination so they stop after an idle window.
+    remediation: >
+      Enable auto-termination on interactive clusters (or enforce it via a cluster
+      policy) with a sensible idle timeout.
+    docs:
+      - https://docs.databricks.com/compute/clusters-manage.html
+
+  - id: PERF-023
+    domain: performance
+    title: Interactive cluster on an outdated runtime
+    description: >
+      Interactive clusters on old Databricks Runtime versions miss performance,
+      security and Photon improvements from current LTS runtimes.
+    severity: low
+    level: CONTEXT_DEPENDENT
+    requires: [compute]
+    frameworks: []
+    waf_pillars: [performance_efficiency]
+    agent_explainer: >
+      Older runtimes are slower and unsupported. Upgrade interactive clusters to a
+      current LTS Databricks Runtime.
+    remediation: >
+      Upgrade interactive clusters to a current LTS runtime (14.3 LTS or newer);
+      standardize via a cluster policy.
+    docs:
+      - https://docs.databricks.com/release-notes/runtime/index.html

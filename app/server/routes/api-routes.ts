@@ -13,6 +13,7 @@ import {
   aiEstateRows,
   governanceMetricsRows,
   perfSummaryRows,
+  computeInventoryRows,
   usageSummaryRows,
   usageHeatmapRows,
   usageActiveUsersTrendRows,
@@ -67,6 +68,7 @@ export function setupApiRoutes(appkit: AppKitServer): void {
     app.get('/api/rows/ai_estate', (_req, res) => res.json(aiEstateRows));
     app.get('/api/rows/governance_metrics', (_req, res) => res.json(governanceMetricsRows));
     app.get('/api/rows/perf_summary', (_req, res) => res.json(perfSummaryRows));
+    app.get('/api/rows/compute_inventory', (_req, res) => res.json(computeInventoryRows));
     app.get('/api/rows/usage_summary', (_req, res) => res.json(usageSummaryRows));
     app.get('/api/rows/usage_heatmap', (_req, res) => res.json(usageHeatmapRows));
     app.get('/api/rows/usage_active_users_trend', (_req, res) => res.json(usageActiveUsersTrendRows));
