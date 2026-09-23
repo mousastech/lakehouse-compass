@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider, NavLink, Outlet } from 'react-router';
-import { Compass, DollarSign, ShieldCheck, Gauge, Sparkles, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Compass, Activity, DollarSign, ShieldCheck, Gauge, Sparkles, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { I18nProvider, useT, LanguageSwitcher } from './lib/i18n';
 import { getTheme, toggleTheme, type Theme } from './lib/theme';
 import { WorkspaceProvider } from './lib/workspace';
@@ -8,10 +8,12 @@ import { WorkspaceSelector } from './components/WorkspaceSelector';
 import { BrandMark } from './components/Brand';
 import { AgentPanel } from './components/AgentPanel';
 import { ExecutiveHome } from './pages/ExecutiveHome';
+import { Observability } from './pages/Observability';
 import { DomainScreen } from './components/DomainScreen';
 
 const NAV = [
   { to: '/', tKey: 'v2.nav.home', icon: Compass, end: true },
+  { to: '/observability', tKey: 'obs.nav', icon: Activity },
   { to: '/finops', tKey: 'nav.finops', icon: DollarSign },
   { to: '/security', tKey: 'nav.security', icon: ShieldCheck },
   { to: '/performance', tKey: 'nav.performance', icon: Gauge },
@@ -151,6 +153,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { path: '/', element: <ExecutiveHome /> },
+      { path: '/observability', element: <Observability /> },
       { path: '/finops', element: <DomainScreen domain="finops" /> },
       { path: '/security', element: <DomainScreen domain="security" /> },
       { path: '/performance', element: <DomainScreen domain="performance" /> },
