@@ -60,11 +60,11 @@ export function History() {
         {items.length === 0 && <li className="text-xs text-muted-foreground">—</li>}
         {items.map((f) => (
           <li key={f.id + f.ruleId} onClick={() => setSelected(f)} className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-border/60 p-2 hover:bg-accent/50">
-            <span className="flex items-center gap-2 text-sm">
-              <span className="tnum rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{f.ruleId}</span>
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+              <span className="tnum shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">{f.ruleId}</span>
               <span className="truncate text-card-foreground">{f.title}</span>
             </span>
-            <SeverityBadge severity={f.severity} />
+            <span className="shrink-0"><SeverityBadge severity={f.severity} /></span>
           </li>
         ))}
       </ul>

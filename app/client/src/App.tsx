@@ -176,7 +176,7 @@ function Layout() {
           collapsed ? 'lg:w-16' : 'lg:w-64'
         }`}
       >
-        <div className="flex items-center justify-between gap-2 border-b border-sidebar-border px-3 py-4">
+        <div className={`flex items-center gap-2 border-b border-sidebar-border px-3 py-4 ${collapsed ? 'justify-between lg:flex-col lg:justify-center' : 'justify-between'}`}>
           <BrandMark collapsed={collapsed} />
           <button
             type="button"
@@ -220,7 +220,7 @@ function Layout() {
           ))}
         </nav>
 
-        <div className="flex items-center justify-between gap-2 border-t border-sidebar-border p-3">
+        <div className={`flex items-center gap-2 border-t border-sidebar-border p-3 ${collapsed ? 'justify-between lg:flex-col lg:justify-center' : 'justify-between'}`}>
           <LanguageSwitcher compact={collapsed} />
           <ThemeToggle />
         </div>
