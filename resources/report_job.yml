@@ -33,6 +33,8 @@ resources:
               - "{{job.parameters.workspace_id}}"
               - "--scan_id"
               - "{{job.parameters.scan_id}}"
+              - "--app_sp"
+              - "${var.app_service_principal}"
           environment_key: report_env
 
       environments:

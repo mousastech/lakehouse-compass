@@ -41,6 +41,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--volume", default="reports")
     p.add_argument("--workspace_id", default="")
     p.add_argument("--scan_id", default="")  # empty = latest for workspace
+    p.add_argument("--app_sp", default="")  # app SP to grant READ VOLUME (download proxy)
     known, _ = p.parse_known_args()
     return known
 
@@ -256,6 +257,15 @@ def main() -> None:
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
     fname = f"compass_{ws}_{scan_id}_{ts}.pdf"
+    # Self-provision the reports Volume so a fresh workspace needs no manual setup
+    # (os.makedirs only creates sub-paths inside an existing UC Volume).
+    try:
+        spark.sql(f"CREATE VOLUME IF NOT EXISTS {args.catalog}.{args.schema}.{args.volume}")
+        # Let the app's SP read the Volume so the in-app download proxy works.
+        if args.app_sp:
+            spark.sql(f"GRANT READ VOLUME ON VOLUME {args.catalog}.{args.schema}.{args.volume} TO `{args.app_sp}`")
+    except Exception as e:  # pragma: no cover - depends on grants
+        print(f"[compass] could not ensure volume {args.catalog}.{args.schema}.{args.volume}: {str(e)[:200]}")
     vol_dir = f"/Volumes/{args.catalog}/{args.schema}/{args.volume}"
     os.makedirs(vol_dir, exist_ok=True)
     vol_path = f"{vol_dir}/{fname}"
