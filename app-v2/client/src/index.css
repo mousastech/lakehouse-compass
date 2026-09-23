@@ -1,0 +1,132 @@
+@import "@databricks/appkit-ui/styles.css";
+
+/* ── Lakehouse Compass — dark-first design system (spec §20.2) ───────────────
+   Deep-space navy ground, cyan/teal "compass" primary. Semantic tokens for
+   severity and the nine diagnostic domains are shared by cards, badges and
+   charts. Dark is the default (:root); `.light` on <html> opts into light. */
+
+:root {
+  --radius: 0.7rem;
+
+  /* Surfaces */
+  --background: oklch(0.19 0.02 255);
+  --foreground: oklch(0.96 0.01 250);
+  --card: oklch(0.23 0.024 258);
+  --card-foreground: oklch(0.96 0.01 250);
+  --popover: oklch(0.23 0.024 258);
+  --popover-foreground: oklch(0.96 0.01 250);
+
+  --primary: oklch(0.78 0.13 195);
+  --primary-foreground: oklch(0.18 0.03 240);
+  --secondary: oklch(0.29 0.02 258);
+  --secondary-foreground: oklch(0.95 0.01 250);
+  --muted: oklch(0.28 0.02 258);
+  --muted-foreground: oklch(0.72 0.02 250);
+  --accent: oklch(0.33 0.04 240);
+  --accent-foreground: oklch(0.96 0.01 250);
+
+  --destructive: oklch(0.64 0.22 22);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.78 0.13 195);
+
+  --chart-1: oklch(0.78 0.13 195);
+  --chart-2: oklch(0.72 0.15 155);
+  --chart-3: oklch(0.74 0.16 85);
+  --chart-4: oklch(0.68 0.19 30);
+  --chart-5: oklch(0.66 0.16 300);
+
+  --sidebar: oklch(0.16 0.02 258);
+  --sidebar-foreground: oklch(0.9 0.01 250);
+  --sidebar-primary: oklch(0.78 0.13 195);
+  --sidebar-primary-foreground: oklch(0.16 0.03 240);
+  --sidebar-accent: oklch(0.26 0.025 258);
+  --sidebar-accent-foreground: oklch(0.95 0.01 250);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.78 0.13 195);
+
+  /* Severity (spec §20.2) */
+  --sev-critical: oklch(0.62 0.23 18);
+  --sev-high: oklch(0.7 0.19 42);
+  --sev-medium: oklch(0.8 0.16 85);
+  --sev-low: oklch(0.72 0.12 210);
+  --sev-info: oklch(0.7 0.02 250);
+
+  /* Domains (spec §20.2) */
+  --domain-security: oklch(0.68 0.19 25);
+  --domain-finops: oklch(0.75 0.16 150);
+  --domain-ai_estate: oklch(0.72 0.16 300);
+  --domain-governance: oklch(0.72 0.14 255);
+  --domain-performance: oklch(0.78 0.13 195);
+  --domain-usage: oklch(0.75 0.15 175);
+  --domain-genie: oklch(0.74 0.16 330);
+  --domain-lakebase: oklch(0.76 0.15 85);
+  --domain-reliability: oklch(0.72 0.12 230);
+
+  /* Motion (spec §20.2) */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 400ms;
+  --dur-story: 800ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html.light {
+  --background: oklch(0.98 0.004 250);
+  --foreground: oklch(0.22 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 255);
+  --primary: oklch(0.58 0.12 205);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.01 250);
+  --secondary-foreground: oklch(0.26 0.02 255);
+  --muted: oklch(0.95 0.01 250);
+  --muted-foreground: oklch(0.5 0.02 250);
+  --accent: oklch(0.93 0.03 220);
+  --accent-foreground: oklch(0.26 0.02 255);
+  --border: oklch(0.9 0.01 250);
+  --input: oklch(0.9 0.01 250);
+  --sidebar: oklch(0.21 0.02 258);
+}
+
+@keyframes compass-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.compass-enter {
+  animation: compass-fade-up var(--dur-base) var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .compass-enter {
+    animation: none;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
