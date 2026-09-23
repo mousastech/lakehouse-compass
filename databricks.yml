@@ -26,6 +26,9 @@ variables:
   app_service_principal:
     description: The Compass app's service principal (grants + report-job CAN_MANAGE_RUN). Set per target after the app's first deploy.
     default: 9e5eaa76-9282-4a5a-be66-41397adf8313
+  compass_llm_endpoint:
+    description: Serving endpoint bound to the Compass Agent (compass-llm). Must exist in the target workspace.
+    default: databricks-claude-sonnet-4-5
 
 targets:
   # dev is the default target for Phase 0 work.

@@ -16,7 +16,7 @@ resources:
         # Compass Agent LLM — a Unity AI Gateway–governed serving endpoint.
         - name: compass-llm
           serving_endpoint:
-            name: databricks-claude-sonnet-4-5
+            name: ${var.compass_llm_endpoint}
             permission: CAN_QUERY
       # Deferred:
       #   - name: postgres
