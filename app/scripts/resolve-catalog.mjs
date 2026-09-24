@@ -10,7 +10,7 @@ import { join, dirname } from 'node:path';
 const HOST_CATALOG = {
   'fevm-moi-ai': 'moi_ai_catalog',
   'engie-noprod': 'noprod_eep_electricity_utilities_storage',
-  'engie-bra-ebe': 'noprod_ebe_electricity_utilities_storage',
+  'engie-bra-ebe': 'noprod_ebe_it',
 };
 
 function resolveCatalog() {
