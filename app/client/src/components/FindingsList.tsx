@@ -5,6 +5,7 @@ import { normFinding, type FindingRow } from '../lib/model';
 import { useT } from '../lib/i18n';
 import { SeverityBadge } from './SeverityBadge';
 import { FindingDrawer } from './FindingDrawer';
+import { TeachButton } from './TeachButton';
 import type { DomainId, Severity } from '../lib/api';
 
 const SEV_ORDER: Record<Severity, number> = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
@@ -37,6 +38,9 @@ export function FindingsList({ domain }: { domain: DomainId }) {
               </div>
               <p className="mt-1 text-sm text-card-foreground">{f.title}</p>
               <p className="truncate text-xs text-muted-foreground">{f.resource}</p>
+              <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                <TeachButton ctx={{ domain: f.domain, ruleId: f.ruleId, title: f.title, remediation: f.remediation, resource: f.resource }} />
+              </div>
             </div>
             <SeverityBadge severity={f.severity} />
           </li>

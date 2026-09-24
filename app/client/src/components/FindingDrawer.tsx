@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import { DOMAIN_META } from '../lib/domains';
 import { SeverityBadge } from './SeverityBadge';
+import { TeachButton } from './TeachButton';
 import type { FindingRow } from '../lib/model';
 
 export function FindingDrawer({ finding, onClose }: { finding: FindingRow | null; onClose: () => void }) {
@@ -92,6 +93,13 @@ export function FindingDrawer({ finding, onClose }: { finding: FindingRow | null
                   </p>
                 </section>
               )}
+
+              <section>
+                <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('teach.heading')}
+                </h3>
+                <TeachButton ctx={{ domain: finding.domain, ruleId: finding.ruleId, title: finding.title, remediation: finding.remediation, resource: finding.resource }} />
+              </section>
 
               {finding.frameworkControls.length > 0 && (
                 <section>

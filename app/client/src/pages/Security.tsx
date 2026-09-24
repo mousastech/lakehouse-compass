@@ -7,6 +7,7 @@ import { useT } from '../lib/i18n';
 import { scoreColorVar, SEVERITY_VAR } from '../lib/domains';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { FindingDrawer } from '../components/FindingDrawer';
+import { TeachButton } from '../components/TeachButton';
 import type { Severity } from '../lib/api';
 
 const SEVS: Severity[] = ['critical', 'high', 'medium', 'low', 'info'];
@@ -112,6 +113,9 @@ export function Security() {
                 </div>
                 <p className="mt-1 text-sm text-card-foreground">{f.title}</p>
                 <p className="truncate text-xs text-muted-foreground">{f.resource}</p>
+                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                  <TeachButton ctx={{ domain: f.domain, ruleId: f.ruleId, title: f.title, remediation: f.remediation, resource: f.resource }} />
+                </div>
               </div>
               <SeverityBadge severity={f.severity} />
             </li>
