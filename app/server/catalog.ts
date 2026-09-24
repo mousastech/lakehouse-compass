@@ -9,6 +9,7 @@
 const HOST_CATALOG: Record<string, string> = {
   'fevm-moi-ai': 'moi_ai_catalog',
   'engie-noprod': 'noprod_eep_electricity_utilities_storage',
+  'engie-bra-ebe': 'noprod_ebe_electricity_utilities_storage',
 };
 
 function resolveCatalog(): string {
