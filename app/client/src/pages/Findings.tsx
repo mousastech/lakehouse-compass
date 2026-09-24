@@ -7,6 +7,7 @@ import { useT } from '../lib/i18n';
 import { DOMAIN_META } from '../lib/domains';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { FindingDrawer } from '../components/FindingDrawer';
+import { TeachButton } from '../components/TeachButton';
 import type { DomainId, Severity } from '../lib/api';
 
 const SEV_ORDER: Record<Severity, number> = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };
@@ -138,7 +139,12 @@ export function Findings() {
                       {t(DOMAIN_META[f.domain]?.tKey ?? f.domain)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-card-foreground">{f.title}</td>
+                  <td className="px-3 py-2 text-card-foreground">
+                    {f.title}
+                    <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      <TeachButton ctx={{ domain: f.domain, ruleId: f.ruleId, title: f.title, remediation: f.remediation, resource: f.resource }} />
+                    </div>
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground">{f.resource}</td>
                 </tr>
               ))}
