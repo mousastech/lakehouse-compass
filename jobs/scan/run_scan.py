@@ -130,6 +130,17 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("endpoint_name"),
             S("entity_type"), S("owner"), S("entity_name"),
         ]),
+        "ai_gateway_config": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("endpoint_name"),
+            S("usage_tracking", BooleanType()), S("payload_logging", BooleanType()),
+            S("rate_limits", BooleanType()), S("guardrails", BooleanType()), S("governed", BooleanType()),
+        ]),
+        "endpoint_usage_summary": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("endpoint_name"),
+            S("requests_30d", LongType()), S("requesters", LongType()),
+            S("in_tokens", DoubleType()), S("out_tokens", DoubleType()),
+            S("error_rate", DoubleType()), S("last_request"), S("top_requesters_json"),
+        ]),
         "governance_metrics": StructType([
             S("scan_id"), S("workspace_id"), S("metric"), S("value", DoubleType()), S("detail"),
         ]),
@@ -402,10 +413,13 @@ def run_live(args) -> None:
         findings += sec.findings
         capabilities += sec.capabilities
 
-        aie = AiEstateCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect(spark)
+        aie = AiEstateCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name,
+                                rest=(rest if is_local else None)).collect(spark)
         findings += aie.findings
         capabilities += aie.capabilities
         ai_inv = aie.inventory.get("ai_estate_inventory", [])
+        ai_gw = aie.inventory.get("ai_gateway_config", [])
+        ep_usage = aie.inventory.get("endpoint_usage_summary", [])
 
         gov = GovernanceCollector(catalog=args.catalog, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect(spark)
         findings += gov.findings
@@ -572,6 +586,10 @@ def run_live(args) -> None:
 
         if ai_inv:
             _write(spark, fq, "ai_estate_inventory", ai_inv)
+        if ai_gw:
+            _write(spark, fq, "ai_gateway_config", ai_gw)
+        if ep_usage:
+            _write(spark, fq, "endpoint_usage_summary", ep_usage)
         if gov_metrics:
             _write(spark, fq, "governance_metrics", gov_metrics)
         if perf_summary:

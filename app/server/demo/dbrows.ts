@@ -101,6 +101,19 @@ export const aiEstateRows = [
   { endpoint_name: 'metlife-fraude', entity_type: 'CUSTOM_MODEL', owner: 'someone@demo', entity_name: 'fraud', workspace_id: '7474658545709121' },
 ];
 
+// AI Gateway governance per endpoint (mirrors ai_gateway_config).
+export const aiGatewayConfigRows = [
+  { endpoint_name: 'metlife-fraude', usage_tracking: true, payload_logging: true, rate_limits: true, guardrails: false, governed: false, workspace_id: '7474658545709121' },
+  { endpoint_name: 'prod-rag-router', usage_tracking: true, payload_logging: false, rate_limits: false, guardrails: false, governed: false, workspace_id: '7474658545709121' },
+  { endpoint_name: 'sales-copilot', usage_tracking: true, payload_logging: true, rate_limits: true, guardrails: true, governed: true, workspace_id: '7474658545709121' },
+];
+
+// Per-endpoint usage / where-used (mirrors endpoint_usage_summary).
+export const endpointUsageSummaryRows = [
+  { endpoint_name: 'metlife-fraude', requests_30d: 18422, requesters: 6, in_tokens: 4210000, out_tokens: 980000, error_rate: 1.2, last_request: new Date().toISOString(), top_requesters_json: JSON.stringify([{ requester: 'svc-fraud@demo', requests: 12000 }, { requester: 'ana.lima@demo', requests: 3200 }, { requester: 'app-scoring', requests: 3222 }]), workspace_id: '7474658545709121' },
+  { endpoint_name: 'prod-rag-router', requests_30d: 5310, requesters: 3, in_tokens: 1560000, out_tokens: 410000, error_rate: 4.8, last_request: new Date().toISOString(), top_requesters_json: JSON.stringify([{ requester: 'sp-rag-router', requests: 4900 }, { requester: 'carlos.rocha@demo', requests: 410 }]), workspace_id: '7474658545709121' },
+];
+
 export const governanceMetricsRows = [
   { metric: 'comment_coverage_pct', value: 35.5, detail: 'moi_ai_catalog' },
   { metric: 'tables_total', value: 172, detail: 'moi_ai_catalog' },

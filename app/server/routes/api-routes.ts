@@ -11,6 +11,8 @@ import {
   trendRows,
   reportsRows,
   aiEstateRows,
+  aiGatewayConfigRows,
+  endpointUsageSummaryRows,
   governanceMetricsRows,
   perfSummaryRows,
   computeInventoryRows,
@@ -68,6 +70,8 @@ export function setupApiRoutes(appkit: AppKitServer): void {
     app.get('/api/rows/trend', (_req, res) => res.json(trendRows));
     app.get('/api/rows/reports', (_req, res) => res.json(reportsRows));
     app.get('/api/rows/ai_estate', (_req, res) => res.json(aiEstateRows));
+    app.get('/api/rows/ai_gateway_config', (_req, res) => res.json(aiGatewayConfigRows));
+    app.get('/api/rows/endpoint_usage_summary', (_req, res) => res.json(endpointUsageSummaryRows));
     app.get('/api/rows/governance_metrics', (_req, res) => res.json(governanceMetricsRows));
     app.get('/api/rows/perf_summary', (_req, res) => res.json(perfSummaryRows));
     app.get('/api/rows/compute_inventory', (_req, res) => res.json(computeInventoryRows));

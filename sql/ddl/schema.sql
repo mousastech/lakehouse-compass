@@ -159,3 +159,18 @@ CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.checkup_reports (
   overall_score DOUBLE, coverage_pct DOUBLE, crit INT, high INT, med INT, low INT,
   framework STRING, met INT, not_met INT, rendered STRING, volume_path STRING
 ) USING DELTA;
+
+-- AI Gateway governance per serving endpoint (from the serving API, local ws).
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.ai_gateway_config (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, endpoint_name STRING,
+  usage_tracking BOOLEAN, payload_logging BOOLEAN, rate_limits BOOLEAN, guardrails BOOLEAN, governed BOOLEAN
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.ai_gateway_config TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
+-- Per-endpoint usage / where-used (from system.serving.endpoint_usage, 30d).
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.endpoint_usage_summary (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, endpoint_name STRING,
+  requests_30d BIGINT, requesters BIGINT, in_tokens DOUBLE, out_tokens DOUBLE,
+  error_rate DOUBLE, last_request STRING, top_requesters_json STRING
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.endpoint_usage_summary TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
