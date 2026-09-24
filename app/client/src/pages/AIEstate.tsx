@@ -108,7 +108,7 @@ export function AIEstate() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard label={t('aie.endpoints')} value={eps.length} accentVar="--domain-ai_estate" icon={<BrainCircuit className="h-4 w-4" />} />
-        <KpiCard label={t('aie.governed')} value={`${governedCount}/${rows.length}`} accentVar="--domain-finops" icon={<ShieldCheck className="h-4 w-4" />} />
+        <KpiCard label={t('aie.governed')} value={`${governedCount}/${rows.length}`} sub={`${rows.length ? Math.round((100 * governedCount) / rows.length) : 0}% ${t('aie.governedPct')}`} accentVar="--domain-finops" icon={<ShieldCheck className="h-4 w-4" />} />
         <KpiCard label={t('aie.aiSpend')} value={fmtUsd(aiUsd)} accentVar="--domain-finops" icon={<Cpu className="h-4 w-4" />} />
         <KpiCard label={t('aie.individual')} value={individual} accentVar="--sev-high" />
       </div>

@@ -5,7 +5,7 @@ import { useLiveRows } from '../lib/analytics';
 import { useApi } from '../lib/api';
 import { useWorkspace } from '../lib/workspace';
 import { normScore, normFinding, normCost, normCompliance } from '../lib/model';
-import { toNum, toStr } from '../lib/rows';
+import { toNum, toStr, toBool } from '../lib/rows';
 import { useT } from '../lib/i18n';
 import { fmtUsd, fmtDate, daysUntil } from '../lib/format';
 import { HealthRing } from '../components/HealthRing';
@@ -37,6 +37,9 @@ export function Overview() {
   const cost = useLiveRows('cost_summary', '/api/rows/cost_summary', ws);
   const compliance = useLiveRows('compliance', '/api/rows/compliance', ws);
   const trend = useLiveRows('trend', '/api/rows/trend', ws);
+  const gw = useLiveRows('ai_gateway_config', '/api/rows/ai_gateway_config', ws);
+  const gwGoverned = gw.rows.filter((r) => toBool(r.governed)).length;
+  const gwGovPct = gw.rows.length ? Math.round((100 * gwGoverned) / gw.rows.length) : 0;
   const { data: maint } = useApi<Record<string, unknown>[]>('/api/rows/maintenance', []);
 
   // Trend delta: latest overall score minus the previous scan's (spec §20.3).
@@ -179,6 +182,13 @@ export function Overview() {
             value={overall?.score ?? '—'}
             sub={`weighted · ${domainRows.length} ${t('overview.domains').toLowerCase()}`}
             accentVar="--domain-performance"
+          />
+          <KpiCard
+            label={t('overview.aiGovernance')}
+            value={`${gwGovPct}%`}
+            sub={`${gwGoverned}/${gw.rows.length} ${t('overview.endpoints')}`}
+            accentVar="--domain-ai_estate"
+            icon={<ShieldCheck className="h-4 w-4" />}
           />
         </div>
       </div>
