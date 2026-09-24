@@ -27,6 +27,8 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { I18nProvider, useT, LanguageSwitcher } from './lib/i18n';
 import { getTheme, toggleTheme, type Theme } from './lib/theme';
@@ -168,6 +170,28 @@ function Layout() {
     });
   };
 
+  // Per-section collapse (Diagnose / Govern & maintain / Act). Default: open.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem('compass_open_sections');
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const isSectionOpen = (key: string) => openSections[key] !== false;
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => {
+      const next = { ...prev, [key]: prev[key] === false };
+      try {
+        localStorage.setItem('compass_open_sections', JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
   return (
     <WorkspaceProvider>
     <div className="flex min-h-screen flex-col bg-background lg:flex-row">
@@ -190,34 +214,49 @@ function Layout() {
         </div>
 
         <nav className="flex flex-col gap-3 overflow-x-auto p-3 lg:overflow-visible">
-          {SECTIONS.map((section) => (
-            <div key={section.labelKey}>
-              {!collapsed && (
-                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                  {t(section.labelKey)}
-                </p>
-              )}
-              <div className="flex gap-1 lg:flex-col">
-                {section.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={navClass}
-                    title={t(item.tKey)}
+          {SECTIONS.map((section) => {
+            // Icon-rail (sidebar collapsed) always shows items; otherwise honor
+            // the per-section open/closed toggle.
+            const showItems = collapsed || isSectionOpen(section.labelKey);
+            return (
+              <div key={section.labelKey}>
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.labelKey)}
+                    aria-expanded={isSectionOpen(section.labelKey)}
+                    className="mb-1 flex w-full items-center justify-between rounded-md px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 transition-colors hover:text-sidebar-foreground/70"
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span className="whitespace-nowrap">{t(item.tKey)}</span>}
-                    {!collapsed && item.phase && (
-                      <span className="ml-auto rounded px-1 text-[9px] uppercase text-sidebar-foreground/40">
-                        {item.phase.replace('Phase ', 'P')}
-                      </span>
-                    )}
-                  </NavLink>
-                ))}
+                    <span>{t(section.labelKey)}</span>
+                    {isSectionOpen(section.labelKey)
+                      ? <ChevronDown className="h-3.5 w-3.5" />
+                      : <ChevronRight className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+                {showItems && (
+                  <div className="flex gap-1 lg:flex-col">
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        className={navClass}
+                        title={t(item.tKey)}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span className="whitespace-nowrap">{t(item.tKey)}</span>}
+                        {!collapsed && item.phase && (
+                          <span className="ml-auto rounded px-1 text-[9px] uppercase text-sidebar-foreground/40">
+                            {item.phase.replace('Phase ', 'P')}
+                          </span>
+                        )}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         <div className={`flex items-center gap-2 border-t border-sidebar-border p-3 ${collapsed ? 'justify-between lg:flex-col lg:justify-center' : 'justify-between'}`}>
