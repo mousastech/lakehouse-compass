@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lakehouse Compass</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -126,6 +130,16 @@
     border: 1px solid rgba(255,255,255,.16);
     padding: 4px 9px; border-radius: 999px; white-space: nowrap;
   }
+  /* language switch */
+  .langsw { display: inline-flex; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; overflow: hidden; }
+  .langsw button {
+    appearance: none; background: transparent; border: 0; cursor: pointer;
+    color: #b6c6cb; font: 600 11.5px/1 var(--sans); letter-spacing: .3px;
+    padding: 6px 9px;
+  }
+  .langsw button + button { border-left: 1px solid rgba(255,255,255,.14); }
+  .langsw button:hover { background: rgba(255,255,255,.08); color: var(--header-ink); }
+  .langsw button.active { background: var(--lava); color: #fff; }
   .icon-btn {
     appearance: none; border: 1px solid rgba(255,255,255,.18);
     background: transparent; color: var(--header-ink);
@@ -289,6 +303,7 @@
     body.nav-open .scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.45); }
     .cols-3 { grid-template-columns: 1fr; }
     .cols-2 { grid-template-columns: 1fr; }
+    .top-tag { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   :focus-visible { outline: 2px solid var(--lava); outline-offset: 2px; border-radius: 4px; }
@@ -305,11 +320,16 @@
       </span>
       <span style="display:flex;flex-direction:column;line-height:1.1">
         <b>Lakehouse Compass</b>
-        <span>the Databricks platform doctor</span>
+        <span data-i18n="brand.tag">the Databricks platform doctor</span>
       </span>
     </div>
     <div class="top-spacer"></div>
-    <span class="top-tag">Docs · v Phase&nbsp;1</span>
+    <span class="top-tag" data-i18n="top.tag">Platform diagnostic &amp; observability</span>
+    <div class="langsw" role="group" aria-label="Language">
+      <button data-lang="en">EN</button>
+      <button data-lang="pt">PT-BR</button>
+      <button data-lang="es">ES</button>
+    </div>
     <button class="icon-btn" id="themeBtn" aria-label="Toggle color theme">
       <svg id="themeIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
     </button>
@@ -319,202 +339,500 @@
 <div class="shell">
   <div class="scrim" id="scrim"></div>
   <nav class="side" id="sideNav">
-    <div class="grp">Get started</div>
-    <a href="#overview">What is Compass</a>
-    <a href="#how">How it works</a>
-    <a href="#architecture">Architecture</a>
-    <div class="grp">Diagnose</div>
-    <a href="#domains">The nine domains</a>
-    <a href="#waf">Well-Architected</a>
-    <a href="#genie-readiness">Genie Readiness <span class="pill new" style="padding:0 6px;font-size:10px">NEW</span></a>
-    <div class="grp">Act</div>
-    <a href="#findings">Findings &amp; compliance</a>
-    <a href="#agent">Compass Agent</a>
-    <div class="grp">Operate</div>
-    <a href="#run">Run &amp; deploy</a>
-    <a href="#principles">Design principles</a>
+    <div class="grp" data-i18n="nav.grp.start">Get started</div>
+    <a href="#overview" data-i18n="nav.overview">What is Compass</a>
+    <a href="#how" data-i18n="nav.how">How it works</a>
+    <div class="grp" data-i18n="nav.grp.diagnose">Diagnose</div>
+    <a href="#domains" data-i18n="nav.domains">The domains</a>
+    <a href="#finops" data-i18n="nav.finops">FinOps &amp; observability</a>
+    <a href="#ai-estate" data-i18n="nav.aiestate">AI Estate &amp; AI Gateway</a>
+    <a href="#performance" data-i18n="nav.performance">Compute inventory</a>
+    <a href="#genie" data-i18n="nav.genie">Genie &amp; cost</a>
+    <a href="#waf" data-i18n="nav.waf">Well-Architected</a>
+    <a href="#genie-readiness" data-i18n="nav.genieready">Genie Readiness</a>
+    <div class="grp" data-i18n="nav.grp.act">Act</div>
+    <a href="#findings" data-i18n="nav.findings">Findings &amp; how-to</a>
+    <a href="#agent" data-i18n="nav.agent">Compass Agent</a>
+    <a href="#reports" data-i18n="nav.reports">Reports &amp; history</a>
+    <div class="grp" data-i18n="nav.grp.operate">Operate</div>
+    <a href="#principles" data-i18n="nav.principles">Design principles</a>
   </nav>
 
   <main>
-    <p class="eyebrow">Platform diagnostic</p>
+    <p class="eyebrow" data-i18n="hero.eyebrow">Platform diagnostic &amp; observability</p>
     <h1>Lakehouse Compass</h1>
     <div class="hero">
-      <p class="lead" style="margin-top:0">A read-only, per-workspace <strong>check-up for your Databricks platform</strong>. Compass scans System Tables and platform APIs, scores your estate against the Well-Architected Framework, prioritizes findings with remediation, and now assesses <strong>Genie Ontology Readiness</strong> — all rendered in one AppKit app with an honest <em>NOT&nbsp;AVAILABLE</em> state wherever a source can't be read.</p>
+      <p class="lead" style="margin-top:0" data-i18n="hero.lead">A read-only, per-workspace <strong>check-up and observability tool for your Databricks platform</strong>. Compass scans System Tables and platform APIs, scores your estate against the Well-Architected Framework, shows where cost and usage go, and prioritizes findings with remediation — and it never changes anything. Every screen shows an honest <em>NOT AVAILABLE</em> wherever a source can't be read.</p>
       <div class="kpis">
-        <div class="kpi"><b>9</b><span>diagnostic domains</span></div>
-        <div class="kpi"><b>7</b><span>WAF pillars scored</span></div>
-        <div class="kpi"><b>7</b><span>Genie-readiness pillars</span></div>
-        <div class="kpi"><b>0</b><span>changes executed — advisory only</span></div>
+        <div class="kpi"><b>11</b><span data-i18n="hero.kpi1">diagnostic domains</span></div>
+        <div class="kpi"><b>7</b><span data-i18n="hero.kpi2">WAF pillars scored</span></div>
+        <div class="kpi"><b>3</b><span data-i18n="hero.kpi3">UI languages (EN · PT · ES)</span></div>
+        <div class="kpi"><b>0</b><span data-i18n="hero.kpi4">changes executed — advisory only</span></div>
       </div>
     </div>
 
-    <h2 id="overview">What is Compass <a class="anchor" href="#overview">#</a></h2>
-    <p>Lakehouse Compass is a diagnostic application built on <strong>AppKit</strong> (Express + React 19 + Vite + Tailwind) that runs entirely on the Databricks platform. It answers a single question for a platform owner: <em>“Is my workspace healthy, governed, and cost-efficient — and where do I fix it first?”</em></p>
-    <p>It never changes anything. Every collector is read-only; the agent <strong>proposes</strong> changes for a human with <code>CAN MANAGE</code> to approve, and execution happens outside Compass. Where a data source is missing or a grant is absent, the screen states exactly that rather than inventing a number.</p>
+    <figure style="margin:26px 0 6px;border:1px solid var(--line,#23262d);border-radius:14px;overflow:hidden;background:var(--card,#15171c);box-shadow:0 8px 30px rgba(0,0,0,.25)">
+      <img src="compass-home.png" alt="Lakehouse Compass — Overview" style="display:block;width:100%;height:auto" />
+      <figcaption style="padding:10px 14px;font-size:13px;color:var(--muted,#9aa0aa)" data-i18n="figure.caption">The Compass Overview — health score, per-domain scores, cost and AI-Gateway-governed KPIs, with the language switcher and on-demand scan.</figcaption>
+    </figure>
+
+    <h2 id="overview"><span data-i18n="overview.h">What is Compass</span> <a class="anchor" href="#overview">#</a></h2>
+    <p data-i18n="overview.p1">Lakehouse Compass is a diagnostic and observability app that runs entirely on the Databricks platform. It answers one question for a workspace administrator — <em>“Is my workspace healthy, governed and cost-efficient, and where do I fix it first?”</em> — without needing deep platform expertise.</p>
+    <p data-i18n="overview.p2">It never changes anything. Every collector is read-only; the Agent <strong>proposes</strong> changes for a human with <code>CAN MANAGE</code> to approve, and execution happens outside Compass. Where a data source is missing or a grant is absent, the screen states exactly that instead of inventing a number. It runs in <strong>any workspace</strong> — the catalog is resolved per workspace, so onboarding a new one needs no code change.</p>
 
     <div class="adm tip">
-      <div class="t">Live app</div>
-      <p>The reference deployment runs on <a href="https://lakehouse-compass-7474658545709121.aws.databricksapps.com">lakehouse-compass-7474658545709121.aws.databricksapps.com</a> in the <code>fevm-moi-ai</code> workspace.</p>
+      <div class="t" data-i18n="overview.tip.t">Multi-language, admin-first</div>
+      <p data-i18n="overview.tip.p">The whole UI is available in <strong>English, Português-BR and Español</strong>, and every finding offers an AI-generated, step-by-step “how to apply” — so an administrator who doesn't know the platform in depth can still act with confidence.</p>
     </div>
 
-    <h2 id="how">How it works <a class="anchor" href="#how">#</a></h2>
-    <p>Three moving parts, decoupled by Delta storage:</p>
+    <h2 id="how"><span data-i18n="how.h">How it works</span> <a class="anchor" href="#how">#</a></h2>
+    <p data-i18n="how.p">Three moving parts, decoupled by Delta storage:</p>
     <div class="grid cols-3">
-      <div class="card"><h4><span class="dot" style="background:var(--lava)"></span>Scan job</h4><p>A serverless Lakeflow job runs the collectors read-only against System Tables and platform APIs, per workspace, and appends results to Delta.</p></div>
-      <div class="card"><h4><span class="dot" style="background:#2f81c4"></span>Delta store</h4><p>Findings, scores, capabilities, cost, compliance and readiness land in <code>moi_ai_catalog.lakehouse_compass.*</code>, keyed by <code>scan_id</code> + <code>workspace_id</code> — history accrues.</p></div>
-      <div class="card"><h4><span class="dot" style="background:var(--good)"></span>AppKit app</h4><p>Reads the latest scan per workspace through the analytics plugin, with a bundled-fixture fallback so every screen renders in demo or live mode.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--lava)"></span><span data-i18n="how.c1.h">Scan</span></h4><p data-i18n="how.c1.p">A serverless job runs the collectors read-only against System Tables and platform APIs, per workspace, and appends results to Delta. Trigger it on demand from the app, or on a schedule.</p></div>
+      <div class="card"><h4><span class="dot" style="background:#2f81c4"></span><span data-i18n="how.c2.h">Store</span></h4><p data-i18n="how.c2.p">Findings, scores, cost, usage, governance and readiness land in the Compass schema (<code>&lt;catalog&gt;.lakehouse_compass.*</code>), keyed by scan and workspace — history accrues over time.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--good)"></span><span data-i18n="how.c3.h">App</span></h4><p data-i18n="how.c3.p">A React app reads the latest scan for the selected workspace, with a demo fallback so every screen always renders. Language and workspace are switchable in the top bar.</p></div>
     </div>
-    <p>The diagnostic runs <strong>per workspace</strong>. Every row carries <code>workspace_id</code>; the UI selector is URL-synced (<code>?ws=</code>) and each query reads the latest scan for the selected workspace, or an Account-mode roll-up.</p>
-
-    <h2 id="architecture">Architecture <a class="anchor" href="#architecture">#</a></h2>
-    <pre><span class="c"># the shape of a scan</span>
-System Tables ─┐
-Platform APIs ─┼─▶  <span class="k">collectors</span> (read-only) ─▶ findings + scores + inventory
-Unity Catalog ─┘                                   │
-                                                   ▼
-                        <span class="k">moi_ai_catalog.lakehouse_compass.*</span>  (Delta, append)
-                                                   │
-                         analytics plugin (SQL warehouse) ─▶ <span class="k">AppKit React app</span></pre>
     <div class="adm note">
-      <div class="t">Honest availability</div>
-      <p>A collector that can't read its source resolves that capability to <strong>NOT_AVAILABLE</strong> and yields no findings — never a fabricated score. Coverage (the share of usable capabilities) is shown alongside every health score so a high number backed by thin checking is never mistaken for proven health.</p>
+      <div class="t" data-i18n="how.note.t">Honest availability</div>
+      <p data-i18n="how.note.p">A collector that can't read its source resolves that capability to <strong>NOT_AVAILABLE</strong> and yields no findings — never a fabricated score. Coverage (the share of usable sources) is shown next to every health score, so a high number backed by thin checking is never mistaken for proven health.</p>
     </div>
 
-    <h2 id="domains">The nine domains <a class="anchor" href="#domains">#</a></h2>
-    <p>The overall health score is a weighted average of nine domain scores. Each domain starts at 100 and is reduced by the severity of its open findings.</p>
+    <h2 id="domains"><span data-i18n="domains.h">The domains</span> <a class="anchor" href="#domains">#</a></h2>
+    <p data-i18n="domains.p">The overall health score is a weighted average of the domain scores; each domain starts at 100 and is reduced by the severity of its open findings. Highlights below.</p>
     <div class="tw">
       <table>
-        <thead><tr><th>Domain</th><th>What it checks</th><th class="num">Weight</th></tr></thead>
+        <thead><tr><th data-i18n="domains.th1">Domain</th><th data-i18n="domains.th2">What it delivers</th><th class="num" data-i18n="domains.th3">Weight</th></tr></thead>
         <tbody>
-          <tr><td><strong>Security</strong></td><td>Over-privileged principals, broad grants, PAT vs OAuth</td><td class="num">25</td></tr>
-          <tr><td><strong>FinOps</strong></td><td>Spend by product/SKU/identity, unattributed cost, scale-to-zero</td><td class="num">20</td></tr>
-          <tr><td><strong>AI Estate</strong></td><td>Serving endpoints, guardrails, spend caps, external models</td><td class="num">12</td></tr>
-          <tr><td><strong>Governance</strong></td><td>Comment coverage &amp; semantic readiness on the governed catalog</td><td class="num">12</td></tr>
-          <tr><td><strong>Performance</strong></td><td>Query volume × latency per identity</td><td class="num">10</td></tr>
-          <tr><td><strong>Usage</strong></td><td>Active users, adoption, Genie usage by surface</td><td class="num">8</td></tr>
-          <tr><td><strong>Genie</strong></td><td>Genie Agents inventory &amp; description coverage</td><td class="num">6</td></tr>
-          <tr><td><strong>Lakebase</strong></td><td>Instance posture, native-login, roles, row-level security</td><td class="num">4</td></tr>
-          <tr><td><strong>Reliability</strong></td><td>Job run failure rate</td><td class="num">3</td></tr>
+          <tr><td><strong>Overview</strong></td><td data-i18n="domains.overview">Overall + per-domain scores, last-scan date, an on-demand “Run scan” button, and an “AI Gateway governed %” KPI.</td><td class="num">—</td></tr>
+          <tr><td><strong>Security</strong></td><td data-i18n="domains.security">Posture and open findings by severity — over-privileged principals, broad grants, PAT vs OAuth.</td><td class="num">25</td></tr>
+          <tr><td><strong>FinOps</strong></td><td data-i18n="domains.finops">Cost observability: spend over time, by product/identity/owner, unattributed drill.</td><td class="num">20</td></tr>
+          <tr><td><strong>AI Estate</strong></td><td data-i18n="domains.aiestate">Per-endpoint AI Gateway governance matrix + who's using each endpoint.</td><td class="num">12</td></tr>
+          <tr><td><strong>Governance</strong></td><td data-i18n="domains.governance">Semantic readiness and metadata/description coverage on the governed catalog.</td><td class="num">12</td></tr>
+          <tr><td><strong>Performance</strong></td><td data-i18n="domains.performance">Compute inventory (warehouses + clusters), config health, cost and query latency.</td><td class="num">10</td></tr>
+          <tr><td><strong>Usage</strong></td><td data-i18n="domains.usage">Active users, adoption and usage patterns over the week.</td><td class="num">8</td></tr>
+          <tr><td><strong>Genie</strong></td><td data-i18n="domains.genie">Agent inventory + a Genie cost &amp; consumption view (surface split, free-vs-billed).</td><td class="num">6</td></tr>
+          <tr><td><strong>Lakebase</strong></td><td data-i18n="domains.lakebase">Instance posture, native-login, roles, row-level security.</td><td class="num">4</td></tr>
+          <tr><td><strong>Reliability</strong></td><td data-i18n="domains.reliability">Job run failure rate.</td><td class="num">3</td></tr>
         </tbody>
       </table>
     </div>
 
-    <h2 id="waf">Well-Architected assessment <a class="anchor" href="#waf">#</a></h2>
-    <p>Every rule maps to one or more pillars of the <strong>Databricks Well-Architected Framework</strong>. A finding penalizes each pillar it touches; a low rule count on a pillar surfaces as <em>limited coverage</em> so a high pillar score isn't over-read.</p>
-    <div class="grid cols-3">
-      <div class="card"><h4>Operational Excellence</h4></div>
-      <div class="card"><h4>Security, Privacy &amp; Compliance</h4></div>
-      <div class="card"><h4>Reliability</h4></div>
-      <div class="card"><h4>Performance Efficiency</h4></div>
-      <div class="card"><h4>Cost Optimization</h4></div>
-      <div class="card"><h4>Data &amp; AI Governance</h4></div>
-      <div class="card"><h4>Interoperability &amp; Usability</h4></div>
-    </div>
-
-    <h2 id="genie-readiness">Genie Readiness <span class="pill new">NEW</span> <a class="anchor" href="#genie-readiness">#</a></h2>
-    <p>A faithful port of the open-source <a href="https://databricks-solutions.github.io/databricks-waf/">Genie Ontology Readiness</a> assessment, integrated as a first-class Compass screen. It produces a <strong>0–100 overall readiness score</strong> across seven weighted pillars — the UC Business Semantics foundation that feeds the learned Genie Ontology — each with a 0–4 maturity level, signals, gaps and gap-driven guidance.</p>
-    <p>Scores are deterministic functions of read-only technical signals (no self-assessment), so repeated scans of the same workspace are directly comparable.</p>
-
-    <h3>The seven pillars</h3>
-    <div class="tw">
-      <table>
-        <thead><tr><th>Pillar</th><th>Signal source</th><th class="num">Weight</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Metadata Richness</strong></td><td>Table &amp; column comment coverage, governed tags</td><td class="num">22</td></tr>
-          <tr><td><strong>Metrics</strong></td><td>UC metric views &amp; their descriptions</td><td class="num">20</td></tr>
-          <tr><td><strong>Genie Agents</strong></td><td>Agents &amp; 30-day activity (<code>system.access.audit</code>)</td><td class="num">16</td></tr>
-          <tr><td><strong>Unity Catalog Foundation</strong></td><td>Catalogs, schemas, table footprint</td><td class="num">15</td></tr>
-          <tr><td><strong>Relationships &amp; Modeling</strong></td><td>PK/FK constraints &amp; a curated gold layer</td><td class="num">12</td></tr>
-          <tr><td><strong>Domains &amp; Stewardship</strong></td><td>Domain / steward tags, certified assets</td><td class="num">10</td></tr>
-          <tr><td><strong>Adoption &amp; Activity</strong></td><td>Active users &amp; query volume (30d)</td><td class="num">5</td></tr>
-          <tr><td class="divider-sub">Total</td><td></td><td class="num"><strong>100</strong></td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Maturity levels</h3>
-    <p>Each pillar's 0–100 score maps to a level; the same ladder colors the radar and the pillar cards.</p>
-    <div class="ladder">
-      <div class="rung"><span class="lvl" style="background:#8a969b">0</span><b>Absent</b><small>capability not present</small></div>
-      <div class="rung"><span class="lvl" style="background:var(--crit)">1</span><b>Initial</b><small>ad hoc / uncurated</small></div>
-      <div class="rung"><span class="lvl" style="background:var(--warn)">2</span><b>Developing</b><small>partial, inconsistent</small></div>
-      <div class="rung"><span class="lvl" style="background:#4a9fd8">3</span><b>Established</b><small>broad, governed</small></div>
-      <div class="rung"><span class="lvl" style="background:var(--good)">4</span><b>Optimized</b><small>comprehensive, certified</small></div>
-    </div>
-
-    <h3>Readiness stages</h3>
-    <p>The overall score lands in a readiness band; guidance then names the lowest-scoring, highest-weight pillars that actually have gaps — <em>“focus next on…”</em>, derived from the assessment, not a static agenda.</p>
-    <div class="tw">
-      <table>
-        <thead><tr><th class="num">Min score</th><th>Stage</th></tr></thead>
-        <tbody>
-          <tr><td class="num">0</td><td>Foundation building</td></tr>
-          <tr><td class="num">35</td><td>Core foundation in place</td></tr>
-          <tr><td class="num">55</td><td>Semantics and Genie forming</td></tr>
-          <tr><td class="num">72</td><td>Curated and validating</td></tr>
-          <tr><td class="num">85</td><td>Ontology-ready</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="adm na">
-      <div class="t">What it reads</div>
-      <p>UC-metadata pillars use <code>system.information_schema</code> (or a per-catalog fallback when the metastore-wide view isn't granted) and are metastore-wide; the Genie and Adoption pillars are scoped to the selected workspace via <code>system.access.audit</code> and <code>system.query.history</code>. Any source that can't be read leaves that pillar <strong>NOT AVAILABLE</strong> with the exact grant needed — the score is never faked.</p>
-    </div>
-    <p>Each pillar with a gap also emits a <code>GEN-READY-*</code> finding (severity scaled by maturity level) mapped to the <strong>Data &amp; AI Governance</strong> and <strong>Interoperability &amp; Usability</strong> WAF pillars, so readiness gaps flow into Findings, the Well-Architected view and the weekly digest like every other domain.</p>
-
-    <h2 id="findings">Findings &amp; compliance <a class="anchor" href="#findings">#</a></h2>
-    <p>Findings are the atoms of Compass: one evaluated rule against one resource, with evidence, remediation and framework controls. Rules are declared in YAML; findings are written append-only per scan so history — new, resolved and still-open — is diffable between two scans.</p>
+    <h2 id="finops"><span data-i18n="finops.h">FinOps &amp; cost observability</span> <a class="anchor" href="#finops">#</a></h2>
+    <p data-i18n="finops.p">Everything billed, made legible for an administrator: <strong>what</strong> is costing, <strong>how much</strong>, <strong>when</strong> and <strong>how</strong> it's used — all from <code>system.billing.usage</code>.</p>
     <ul>
-      <li><strong>Findings</strong> — searchable, filterable by domain and severity, with an evidence drawer.</li>
-      <li><strong>Compliance</strong> — advisory mapping of findings to control frameworks (a mapping, not a certification claim).</li>
-      <li><strong>Maintenance</strong> — recurring hygiene tasks generated from rules and scan freshness.</li>
-      <li><strong>Digest</strong> — a plain-language “what changed and what to fix first”, optionally pushed to Slack.</li>
+      <li data-i18n="finops.l1"><strong>Cost over time</strong> — an evolutionary chart with a period filter (30d / 90d / 6M / 12M or a specific month) and monthly/daily granularity.</li>
+      <li data-i18n="finops.l2"><strong>Breakdown &amp; drill</strong> — a cost treemap by product; click through to resource, identity, effective owner and tags.</li>
+      <li data-i18n="finops.l3"><strong>Unattributed drill</strong> — spend with no run-as identity (warehouses, apps, serverless jobs) is resolved to an effective owner, so “unattributed” is explained, not hidden.</li>
+      <li data-i18n="finops.l4"><strong>Who is using it</strong> — top consumers ranked by cost and DBUs, with plain-language explanations of each metric.</li>
     </ul>
 
-    <h2 id="agent">Compass Agent <a class="anchor" href="#agent">#</a></h2>
-    <p>A governed, read-only advisor on a Unity AI Gateway serving endpoint. It explains findings, prioritizes them, and <strong>drafts</strong> proposed changes with a rollback and a blast-radius estimate — citing finding and rule ids, respecting the selected workspace, and never executing. A reviewer with <code>CAN MANAGE</code> approves; the change is applied outside Compass.</p>
+    <h2 id="ai-estate"><span data-i18n="aie.h">AI Estate &amp; AI Gateway governance</span> <a class="anchor" href="#ai-estate">#</a></h2>
+    <p data-i18n="aie.p">For every model-serving endpoint, Compass shows a <strong>per-endpoint AI Gateway governance matrix</strong> and how it's actually being used.</p>
+    <ul>
+      <li data-i18n="aie.l1"><strong>Governance matrix</strong> — usage tracking, payload logging, rate limits and guardrails per endpoint, rolled up to a <em>Governed / Partial / Not governed</em> badge and a workspace-wide “% governed”.</li>
+      <li data-i18n="aie.l2"><strong>Usage &amp; who's using it</strong> — requests, distinct requesters, tokens and error rate from <code>system.serving.endpoint_usage</code>.</li>
+      <li data-i18n="aie.l3"><strong>Drill</strong> — click an endpoint to see its full config plus the top requesters driving it.</li>
+    </ul>
 
-    <h2 id="run">Run &amp; deploy <a class="anchor" href="#run">#</a></h2>
-    <p>Compass ships as a Databricks Asset Bundle. The app self-builds on Apps compute, so it deploys with the bundle — never <code>databricks apps deploy</code>. Order matters: run the scan first so the Delta tables exist before the app build introspects the warehouse.</p>
-    <pre><span class="c"># 1 · upload bundle (scan job + app source)</span>
-databricks bundle deploy -t dev -p fevm-moi-ai
+    <h2 id="performance"><span data-i18n="perf.h">Performance &amp; compute inventory</span> <a class="anchor" href="#performance">#</a></h2>
+    <p data-i18n="perf.p">Beyond query latency, Compass inventories the compute that bills: <strong>SQL warehouses and interactive clusters</strong>, each with its configuration health (auto-stop, serverless, DBR version, auto-termination), 30-day cost, utilization and query volume — so idle or mis-configured compute is easy to spot.</p>
 
-<span class="c"># 2 · run the scan so the tables populate</span>
-databricks bundle run compass_scan -t dev -p fevm-moi-ai
+    <h2 id="genie"><span data-i18n="genie.h">Genie &amp; Genie cost</span> <a class="anchor" href="#genie">#</a></h2>
+    <p data-i18n="genie.p">The Genie screen inventories Genie Agents and adds a <strong>cost &amp; consumption</strong> view: the split between Genie Code and Genie Agents surfaces, free-vs-billed usage per user against the monthly free allowance, and cost/DBUs over time.</p>
 
-<span class="c"># 3 · build + deploy the app (typegen sees the new tables)</span>
-databricks bundle run compass_app -t dev -p fevm-moi-ai</pre>
-    <div class="adm warn">
-      <div class="t">Environment notes</div>
-      <p>The catalog is <code>moi_ai_catalog</code> — <code>main</code> is not accessible in this workspace. The app build runs <code>tsc</code> strict, so unused imports fail the build. Business-hours automation stops the app off-hours; a redeploy restarts it.</p>
+    <h2 id="waf"><span data-i18n="waf.h">Well-Architected assessment</span> <a class="anchor" href="#waf">#</a></h2>
+    <p data-i18n="waf.p">Every rule maps to one or more pillars of the <strong>Databricks Well-Architected Framework</strong>. A control catalogue is scored per pillar as <em>pass / gap / needs-validation</em>, with a confidence band so a high score backed by few automated checks isn't over-read.</p>
+    <div class="grid cols-3">
+      <div class="card"><h4 data-i18n="waf.p1">Operational Excellence</h4></div>
+      <div class="card"><h4 data-i18n="waf.p2">Security, Privacy &amp; Compliance</h4></div>
+      <div class="card"><h4 data-i18n="waf.p3">Reliability</h4></div>
+      <div class="card"><h4 data-i18n="waf.p4">Performance Efficiency</h4></div>
+      <div class="card"><h4 data-i18n="waf.p5">Cost Optimization</h4></div>
+      <div class="card"><h4 data-i18n="waf.p6">Data &amp; AI Governance</h4></div>
+      <div class="card"><h4 data-i18n="waf.p7">Interoperability &amp; Usability</h4></div>
     </div>
 
-    <h2 id="principles">Design principles <a class="anchor" href="#principles">#</a></h2>
+    <h2 id="genie-readiness"><span data-i18n="gr.h">Genie Readiness</span> <a class="anchor" href="#genie-readiness">#</a></h2>
+    <p data-i18n="gr.p1">A <strong>0–100 readiness score</strong> across seven weighted pillars — the Unity Catalog business-semantics foundation that feeds a learned Genie Ontology — each with a 0–4 maturity level, signals, gaps and gap-driven guidance.</p>
+    <p data-i18n="gr.p2">Scores are deterministic functions of read-only technical signals (no self-assessment), so repeated scans of the same workspace are directly comparable.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th data-i18n="gr.th1">Pillar</th><th data-i18n="gr.th2">Signal source</th><th class="num" data-i18n="gr.th3">Weight</th></tr></thead>
+        <tbody>
+          <tr><td><strong data-i18n="gr.r1">Metadata Richness</strong></td><td data-i18n="gr.r1d">Table &amp; column comment coverage, governed tags</td><td class="num">22</td></tr>
+          <tr><td><strong data-i18n="gr.r2">Metrics</strong></td><td data-i18n="gr.r2d">UC metric views &amp; their descriptions</td><td class="num">20</td></tr>
+          <tr><td><strong>Genie Agents</strong></td><td data-i18n="gr.r3d">Agents &amp; 30-day activity</td><td class="num">16</td></tr>
+          <tr><td><strong data-i18n="gr.r4">Unity Catalog Foundation</strong></td><td data-i18n="gr.r4d">Catalogs, schemas, table footprint</td><td class="num">15</td></tr>
+          <tr><td><strong data-i18n="gr.r5">Relationships &amp; Modeling</strong></td><td data-i18n="gr.r5d">PK/FK constraints &amp; a curated gold layer</td><td class="num">12</td></tr>
+          <tr><td><strong data-i18n="gr.r6">Domains &amp; Stewardship</strong></td><td data-i18n="gr.r6d">Domain / steward tags, certified assets</td><td class="num">10</td></tr>
+          <tr><td><strong data-i18n="gr.r7">Adoption &amp; Activity</strong></td><td data-i18n="gr.r7d">Active users &amp; query volume (30d)</td><td class="num">5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ladder">
+      <div class="rung"><span class="lvl" style="background:#8a969b">0</span><b data-i18n="gr.m0">Absent</b><small data-i18n="gr.m0d">not present</small></div>
+      <div class="rung"><span class="lvl" style="background:var(--crit)">1</span><b data-i18n="gr.m1">Initial</b><small data-i18n="gr.m1d">ad hoc / uncurated</small></div>
+      <div class="rung"><span class="lvl" style="background:var(--warn)">2</span><b data-i18n="gr.m2">Developing</b><small data-i18n="gr.m2d">partial, inconsistent</small></div>
+      <div class="rung"><span class="lvl" style="background:#4a9fd8">3</span><b data-i18n="gr.m3">Established</b><small data-i18n="gr.m3d">broad, governed</small></div>
+      <div class="rung"><span class="lvl" style="background:var(--good)">4</span><b data-i18n="gr.m4">Optimized</b><small data-i18n="gr.m4d">comprehensive, certified</small></div>
+    </div>
+
+    <h2 id="findings"><span data-i18n="find.h">Findings &amp; “how to apply”</span> <a class="anchor" href="#findings">#</a></h2>
+    <p data-i18n="find.p">Findings are the atoms of Compass: one evaluated rule against one resource, with evidence, remediation and framework controls — searchable and filterable by domain and severity, written append-only per scan so history is diffable.</p>
+    <div class="adm tip">
+      <div class="t" data-i18n="find.tip.t">How to apply (AI)</div>
+      <p data-i18n="find.tip.p">Every finding has a <strong>“Teach me how to apply”</strong> action: it asks a governed Claude endpoint for concrete, numbered Databricks steps (UI paths, SQL, verification) to apply the fix — the learning-curve reducer for administrators. It's read-only guidance; Compass never executes.</p>
+    </div>
+    <ul>
+      <li data-i18n="find.l1"><strong>Compliance</strong> — advisory mapping of findings to control frameworks (a mapping, not a certification claim).</li>
+      <li data-i18n="find.l2"><strong>Maintenance</strong> — recurring hygiene tasks generated from rules and scan freshness.</li>
+      <li data-i18n="find.l3"><strong>Digest</strong> — a plain-language “what changed and what to fix first”, optionally pushed to a channel.</li>
+    </ul>
+
+    <h2 id="agent"><span data-i18n="agent.h">Compass Agent</span> <a class="anchor" href="#agent">#</a></h2>
+    <p data-i18n="agent.p">A governed, read-only advisor on a serving endpoint. It explains findings, prioritizes them, and <strong>drafts</strong> proposed changes with a rollback and a blast-radius estimate — citing finding and rule ids, respecting the selected workspace, and never executing. A reviewer with <code>CAN MANAGE</code> approves; the change is applied outside Compass.</p>
+
+    <h2 id="reports"><span data-i18n="rep.h">Reports &amp; history</span> <a class="anchor" href="#reports">#</a></h2>
+    <ul>
+      <li data-i18n="rep.l1"><strong>Reports</strong> — a premium PDF per scan, generated on demand and stored in a Unity Catalog Volume, downloadable in-app.</li>
+      <li data-i18n="rep.l2"><strong>History</strong> — an immutable snapshot per scan, so score/coverage trends and finding diffs (new / resolved / still-open) between two scans are first-class.</li>
+      <li data-i18n="rep.l3"><strong>Self-check</strong> — Compass diagnoses its own posture (endpoint governance, least-privilege grants, scan freshness).</li>
+    </ul>
+
+    <h2 id="principles"><span data-i18n="pr.h">Design principles</span> <a class="anchor" href="#principles">#</a></h2>
     <div class="grid cols-2">
-      <div class="card"><h4>Read-only by construction</h4><p>Collectors only read. The agent proposes; humans dispose. Compass never executes a change.</p></div>
-      <div class="card"><h4>Honest, never fabricated</h4><p>A missing source is NOT_AVAILABLE with the exact grant needed — not a confident zero.</p></div>
-      <div class="card"><h4>Per-workspace, with history</h4><p>Every row is workspace-scoped and append-only, so trends and scan diffs are first-class.</p></div>
-      <div class="card"><h4>Demo-first, live-ready</h4><p>The same client renders bundled fixtures or live Delta, so a screen always shows a designed state.</p></div>
+      <div class="card"><h4 data-i18n="pr.c1.h">Read-only by construction</h4><p data-i18n="pr.c1.p">Collectors only read. The agent proposes; humans dispose. Compass never executes a change.</p></div>
+      <div class="card"><h4 data-i18n="pr.c2.h">Honest, never fabricated</h4><p data-i18n="pr.c2.p">A missing source is NOT_AVAILABLE with the exact grant needed — not a confident zero.</p></div>
+      <div class="card"><h4 data-i18n="pr.c3.h">Runs in any workspace</h4><p data-i18n="pr.c3.p">Every row is workspace-scoped and append-only; the catalog resolves per workspace, so onboarding a new one needs no code change.</p></div>
+      <div class="card"><h4 data-i18n="pr.c4.h">Built to lower the learning curve</h4><p data-i18n="pr.c4.p">Multi-language UI, plain-language explanations and AI “how to apply” on every finding — so an admin doesn't need deep platform expertise.</p></div>
     </div>
 
     <hr>
-    <p class="divider-sub">Lakehouse Compass · read-only diagnostic · the agent proposes, humans dispose. This page explains the app; it is not an official Databricks product page.</p>
+    <p class="divider-sub" data-i18n="foot.note">Lakehouse Compass · read-only diagnostic · the agent proposes, humans dispose. This page explains the app; it is not an official Databricks product page.</p>
   </main>
 
   <aside class="toc">
-    <div class="t">On this page</div>
+    <div class="t" data-i18n="toc.t">On this page</div>
     <div id="tocLinks"></div>
   </aside>
 </div>
 
 <footer>
   <div class="foot-inner">
-    <span>Lakehouse Compass — the Databricks platform doctor</span>
-    <span>Diagnose · Govern · Act</span>
+    <span data-i18n="foot.left">Lakehouse Compass — the Databricks platform doctor</span>
+    <span data-i18n="foot.right">Diagnose · Govern · Act</span>
   </div>
 </footer>
 
 <script>
+  // ---- i18n dictionary (HTML values; product/technical terms kept as-is) ----
+  var I18N = {
+    en: {
+      "figure.caption": "The Compass Overview — health score, per-domain scores, cost and AI-Gateway-governed KPIs, with the language switcher and on-demand scan.",
+      "brand.tag": "the Databricks platform doctor",
+      "top.tag": "Platform diagnostic &amp; observability",
+      "nav.grp.start": "Get started", "nav.overview": "What is Compass", "nav.how": "How it works",
+      "nav.grp.diagnose": "Diagnose", "nav.domains": "The domains", "nav.finops": "FinOps &amp; observability",
+      "nav.aiestate": "AI Estate &amp; AI Gateway", "nav.performance": "Compute inventory", "nav.genie": "Genie &amp; cost",
+      "nav.waf": "Well-Architected", "nav.genieready": "Genie Readiness",
+      "nav.grp.act": "Act", "nav.findings": "Findings &amp; how-to", "nav.agent": "Compass Agent", "nav.reports": "Reports &amp; history",
+      "nav.grp.operate": "Operate", "nav.principles": "Design principles",
+      "hero.eyebrow": "Platform diagnostic &amp; observability",
+      "hero.lead": "A read-only, per-workspace <strong>check-up and observability tool for your Databricks platform</strong>. Compass scans System Tables and platform APIs, scores your estate against the Well-Architected Framework, shows where cost and usage go, and prioritizes findings with remediation — and it never changes anything. Every screen shows an honest <em>NOT AVAILABLE</em> wherever a source can't be read.",
+      "hero.kpi1": "diagnostic domains", "hero.kpi2": "WAF pillars scored", "hero.kpi3": "UI languages (EN · PT · ES)", "hero.kpi4": "changes executed — advisory only",
+      "overview.h": "What is Compass",
+      "overview.p1": "Lakehouse Compass is a diagnostic and observability app that runs entirely on the Databricks platform. It answers one question for a workspace administrator — <em>“Is my workspace healthy, governed and cost-efficient, and where do I fix it first?”</em> — without needing deep platform expertise.",
+      "overview.p2": "It never changes anything. Every collector is read-only; the Agent <strong>proposes</strong> changes for a human with <code>CAN MANAGE</code> to approve, and execution happens outside Compass. Where a data source is missing or a grant is absent, the screen states exactly that instead of inventing a number. It runs in <strong>any workspace</strong> — the catalog is resolved per workspace, so onboarding a new one needs no code change.",
+      "overview.tip.t": "Multi-language, admin-first",
+      "overview.tip.p": "The whole UI is available in <strong>English, Português-BR and Español</strong>, and every finding offers an AI-generated, step-by-step “how to apply” — so an administrator who doesn't know the platform in depth can still act with confidence.",
+      "how.h": "How it works", "how.p": "Three moving parts, decoupled by Delta storage:",
+      "how.c1.h": "Scan", "how.c1.p": "A serverless job runs the collectors read-only against System Tables and platform APIs, per workspace, and appends results to Delta. Trigger it on demand from the app, or on a schedule.",
+      "how.c2.h": "Store", "how.c2.p": "Findings, scores, cost, usage, governance and readiness land in the Compass schema (<code>&lt;catalog&gt;.lakehouse_compass.*</code>), keyed by scan and workspace — history accrues over time.",
+      "how.c3.h": "App", "how.c3.p": "A React app reads the latest scan for the selected workspace, with a demo fallback so every screen always renders. Language and workspace are switchable in the top bar.",
+      "how.note.t": "Honest availability",
+      "how.note.p": "A collector that can't read its source resolves that capability to <strong>NOT_AVAILABLE</strong> and yields no findings — never a fabricated score. Coverage (the share of usable sources) is shown next to every health score, so a high number backed by thin checking is never mistaken for proven health.",
+      "domains.h": "The domains",
+      "domains.p": "The overall health score is a weighted average of the domain scores; each domain starts at 100 and is reduced by the severity of its open findings. Highlights below.",
+      "domains.th1": "Domain", "domains.th2": "What it delivers", "domains.th3": "Weight",
+      "domains.overview": "Overall + per-domain scores, last-scan date, an on-demand “Run scan” button, and an “AI Gateway governed %” KPI.",
+      "domains.security": "Posture and open findings by severity — over-privileged principals, broad grants, PAT vs OAuth.",
+      "domains.finops": "Cost observability: spend over time, by product/identity/owner, unattributed drill.",
+      "domains.aiestate": "Per-endpoint AI Gateway governance matrix + who's using each endpoint.",
+      "domains.governance": "Semantic readiness and metadata/description coverage on the governed catalog.",
+      "domains.performance": "Compute inventory (warehouses + clusters), config health, cost and query latency.",
+      "domains.usage": "Active users, adoption and usage patterns over the week.",
+      "domains.genie": "Agent inventory + a Genie cost &amp; consumption view (surface split, free-vs-billed).",
+      "domains.lakebase": "Instance posture, native-login, roles, row-level security.",
+      "domains.reliability": "Job run failure rate.",
+      "finops.h": "FinOps &amp; cost observability",
+      "finops.p": "Everything billed, made legible for an administrator: <strong>what</strong> is costing, <strong>how much</strong>, <strong>when</strong> and <strong>how</strong> it's used — all from <code>system.billing.usage</code>.",
+      "finops.l1": "<strong>Cost over time</strong> — an evolutionary chart with a period filter (30d / 90d / 6M / 12M or a specific month) and monthly/daily granularity.",
+      "finops.l2": "<strong>Breakdown &amp; drill</strong> — a cost treemap by product; click through to resource, identity, effective owner and tags.",
+      "finops.l3": "<strong>Unattributed drill</strong> — spend with no run-as identity (warehouses, apps, serverless jobs) is resolved to an effective owner, so “unattributed” is explained, not hidden.",
+      "finops.l4": "<strong>Who is using it</strong> — top consumers ranked by cost and DBUs, with plain-language explanations of each metric.",
+      "aie.h": "AI Estate &amp; AI Gateway governance",
+      "aie.p": "For every model-serving endpoint, Compass shows a <strong>per-endpoint AI Gateway governance matrix</strong> and how it's actually being used.",
+      "aie.l1": "<strong>Governance matrix</strong> — usage tracking, payload logging, rate limits and guardrails per endpoint, rolled up to a <em>Governed / Partial / Not governed</em> badge and a workspace-wide “% governed”.",
+      "aie.l2": "<strong>Usage &amp; who's using it</strong> — requests, distinct requesters, tokens and error rate from <code>system.serving.endpoint_usage</code>.",
+      "aie.l3": "<strong>Drill</strong> — click an endpoint to see its full config plus the top requesters driving it.",
+      "perf.h": "Performance &amp; compute inventory",
+      "perf.p": "Beyond query latency, Compass inventories the compute that bills: <strong>SQL warehouses and interactive clusters</strong>, each with its configuration health (auto-stop, serverless, DBR version, auto-termination), 30-day cost, utilization and query volume — so idle or mis-configured compute is easy to spot.",
+      "genie.h": "Genie &amp; Genie cost",
+      "genie.p": "The Genie screen inventories Genie Agents and adds a <strong>cost &amp; consumption</strong> view: the split between Genie Code and Genie Agents surfaces, free-vs-billed usage per user against the monthly free allowance, and cost/DBUs over time.",
+      "waf.h": "Well-Architected assessment",
+      "waf.p": "Every rule maps to one or more pillars of the <strong>Databricks Well-Architected Framework</strong>. A control catalogue is scored per pillar as <em>pass / gap / needs-validation</em>, with a confidence band so a high score backed by few automated checks isn't over-read.",
+      "waf.p1": "Operational Excellence", "waf.p2": "Security, Privacy &amp; Compliance", "waf.p3": "Reliability", "waf.p4": "Performance Efficiency", "waf.p5": "Cost Optimization", "waf.p6": "Data &amp; AI Governance", "waf.p7": "Interoperability &amp; Usability",
+      "gr.h": "Genie Readiness",
+      "gr.p1": "A <strong>0–100 readiness score</strong> across seven weighted pillars — the Unity Catalog business-semantics foundation that feeds a learned Genie Ontology — each with a 0–4 maturity level, signals, gaps and gap-driven guidance.",
+      "gr.p2": "Scores are deterministic functions of read-only technical signals (no self-assessment), so repeated scans of the same workspace are directly comparable.",
+      "gr.th1": "Pillar", "gr.th2": "Signal source", "gr.th3": "Weight",
+      "gr.r1": "Metadata Richness", "gr.r1d": "Table &amp; column comment coverage, governed tags",
+      "gr.r2": "Metrics", "gr.r2d": "UC metric views &amp; their descriptions",
+      "gr.r3d": "Agents &amp; 30-day activity",
+      "gr.r4": "Unity Catalog Foundation", "gr.r4d": "Catalogs, schemas, table footprint",
+      "gr.r5": "Relationships &amp; Modeling", "gr.r5d": "PK/FK constraints &amp; a curated gold layer",
+      "gr.r6": "Domains &amp; Stewardship", "gr.r6d": "Domain / steward tags, certified assets",
+      "gr.r7": "Adoption &amp; Activity", "gr.r7d": "Active users &amp; query volume (30d)",
+      "gr.m0": "Absent", "gr.m0d": "not present", "gr.m1": "Initial", "gr.m1d": "ad hoc / uncurated",
+      "gr.m2": "Developing", "gr.m2d": "partial, inconsistent", "gr.m3": "Established", "gr.m3d": "broad, governed",
+      "gr.m4": "Optimized", "gr.m4d": "comprehensive, certified",
+      "find.h": "Findings &amp; “how to apply”",
+      "find.p": "Findings are the atoms of Compass: one evaluated rule against one resource, with evidence, remediation and framework controls — searchable and filterable by domain and severity, written append-only per scan so history is diffable.",
+      "find.tip.t": "How to apply (AI)",
+      "find.tip.p": "Every finding has a <strong>“Teach me how to apply”</strong> action: it asks a governed Claude endpoint for concrete, numbered Databricks steps (UI paths, SQL, verification) to apply the fix — the learning-curve reducer for administrators. It's read-only guidance; Compass never executes.",
+      "find.l1": "<strong>Compliance</strong> — advisory mapping of findings to control frameworks (a mapping, not a certification claim).",
+      "find.l2": "<strong>Maintenance</strong> — recurring hygiene tasks generated from rules and scan freshness.",
+      "find.l3": "<strong>Digest</strong> — a plain-language “what changed and what to fix first”, optionally pushed to a channel.",
+      "agent.h": "Compass Agent",
+      "agent.p": "A governed, read-only advisor on a serving endpoint. It explains findings, prioritizes them, and <strong>drafts</strong> proposed changes with a rollback and a blast-radius estimate — citing finding and rule ids, respecting the selected workspace, and never executing. A reviewer with <code>CAN MANAGE</code> approves; the change is applied outside Compass.",
+      "rep.h": "Reports &amp; history",
+      "rep.l1": "<strong>Reports</strong> — a premium PDF per scan, generated on demand and stored in a Unity Catalog Volume, downloadable in-app.",
+      "rep.l2": "<strong>History</strong> — an immutable snapshot per scan, so score/coverage trends and finding diffs (new / resolved / still-open) between two scans are first-class.",
+      "rep.l3": "<strong>Self-check</strong> — Compass diagnoses its own posture (endpoint governance, least-privilege grants, scan freshness).",
+      "pr.h": "Design principles",
+      "pr.c1.h": "Read-only by construction", "pr.c1.p": "Collectors only read. The agent proposes; humans dispose. Compass never executes a change.",
+      "pr.c2.h": "Honest, never fabricated", "pr.c2.p": "A missing source is NOT_AVAILABLE with the exact grant needed — not a confident zero.",
+      "pr.c3.h": "Runs in any workspace", "pr.c3.p": "Every row is workspace-scoped and append-only; the catalog resolves per workspace, so onboarding a new one needs no code change.",
+      "pr.c4.h": "Built to lower the learning curve", "pr.c4.p": "Multi-language UI, plain-language explanations and AI “how to apply” on every finding — so an admin doesn't need deep platform expertise.",
+      "foot.note": "Lakehouse Compass · read-only diagnostic · the agent proposes, humans dispose. This page explains the app; it is not an official Databricks product page.",
+      "toc.t": "On this page", "foot.left": "Lakehouse Compass — the Databricks platform doctor", "foot.right": "Diagnose · Govern · Act"
+    },
+    pt: {
+      "figure.caption": "A Overview do Compass — health score, notas por domínio, KPIs de custo e de governança do AI Gateway, com o seletor de idioma e o scan sob demanda.",
+      "brand.tag": "o médico da plataforma Databricks",
+      "top.tag": "Diagnóstico &amp; observabilidade de plataforma",
+      "nav.grp.start": "Começar", "nav.overview": "O que é o Compass", "nav.how": "Como funciona",
+      "nav.grp.diagnose": "Diagnosticar", "nav.domains": "Os domínios", "nav.finops": "FinOps &amp; observabilidade",
+      "nav.aiestate": "AI Estate &amp; AI Gateway", "nav.performance": "Inventário de compute", "nav.genie": "Genie &amp; custo",
+      "nav.waf": "Well-Architected", "nav.genieready": "Genie Readiness",
+      "nav.grp.act": "Agir", "nav.findings": "Achados &amp; como aplicar", "nav.agent": "Compass Agent", "nav.reports": "Relatórios &amp; histórico",
+      "nav.grp.operate": "Operar", "nav.principles": "Princípios de design",
+      "hero.eyebrow": "Diagnóstico &amp; observabilidade de plataforma",
+      "hero.lead": "Uma ferramenta <strong>read-only de check-up e observabilidade da sua plataforma Databricks</strong>, por workspace. O Compass varre System Tables e APIs de plataforma, pontua seu ambiente contra o Well-Architected Framework, mostra para onde vão custo e uso, e prioriza achados com remediação — e nunca altera nada. Cada tela mostra um <em>NOT AVAILABLE</em> honesto onde uma fonte não pode ser lida.",
+      "hero.kpi1": "domínios de diagnóstico", "hero.kpi2": "pilares WAF pontuados", "hero.kpi3": "idiomas da UI (EN · PT · ES)", "hero.kpi4": "mudanças executadas — apenas consultivo",
+      "overview.h": "O que é o Compass",
+      "overview.p1": "O Lakehouse Compass é um app de diagnóstico e observabilidade que roda inteiramente na plataforma Databricks. Ele responde a uma pergunta do administrador do workspace — <em>“Meu workspace está saudável, governado e eficiente em custo, e por onde começo a corrigir?”</em> — sem exigir domínio profundo da plataforma.",
+      "overview.p2": "Ele nunca altera nada. Todo collector é read-only; o Agente <strong>propõe</strong> mudanças para um humano com <code>CAN MANAGE</code> aprovar, e a execução acontece fora do Compass. Onde falta uma fonte ou um grant, a tela diz exatamente isso em vez de inventar um número. Ele roda em <strong>qualquer workspace</strong> — o catálogo é resolvido por workspace, então habilitar um novo não exige mudança de código.",
+      "overview.tip.t": "Multi-idioma, feito para o admin",
+      "overview.tip.p": "Toda a UI está disponível em <strong>English, Português-BR e Español</strong>, e cada achado oferece um “como aplicar” passo a passo gerado por IA — para que um administrador que não conhece a plataforma a fundo consiga agir com confiança.",
+      "how.h": "Como funciona", "how.p": "Três partes, desacopladas pelo armazenamento em Delta:",
+      "how.c1.h": "Scan", "how.c1.p": "Um job serverless roda os collectors read-only contra System Tables e APIs de plataforma, por workspace, e adiciona resultados ao Delta. Dispare sob demanda pelo app, ou por agendamento.",
+      "how.c2.h": "Store", "how.c2.p": "Achados, scores, custo, uso, governança e readiness caem no schema do Compass (<code>&lt;catalog&gt;.lakehouse_compass.*</code>), chaveados por scan e workspace — o histórico se acumula.",
+      "how.c3.h": "App", "how.c3.p": "Um app React lê o último scan do workspace selecionado, com fallback demo para toda tela sempre renderizar. Idioma e workspace são alternáveis na barra superior.",
+      "how.note.t": "Disponibilidade honesta",
+      "how.note.p": "Um collector que não consegue ler sua fonte resolve aquela capacidade como <strong>NOT_AVAILABLE</strong> e não gera achados — nunca um score fabricado. A cobertura (a fração de fontes utilizáveis) aparece ao lado de cada score, para que um número alto com pouca verificação não seja confundido com saúde comprovada.",
+      "domains.h": "Os domínios",
+      "domains.p": "O score geral é a média ponderada dos scores por domínio; cada domínio começa em 100 e é reduzido pela severidade dos seus achados abertos. Destaques abaixo.",
+      "domains.th1": "Domínio", "domains.th2": "O que entrega", "domains.th3": "Peso",
+      "domains.overview": "Scores geral e por domínio, data do último scan, botão “Rodar scan” sob demanda e um KPI de “% governado no AI Gateway”.",
+      "domains.security": "Postura e achados abertos por severidade — principals com excesso de privilégio, grants amplos, PAT vs OAuth.",
+      "domains.finops": "Observabilidade de custo: gasto ao longo do tempo, por produto/identidade/dono, drill do não-atribuído.",
+      "domains.aiestate": "Matriz de governança AI Gateway por endpoint + quem está usando cada endpoint.",
+      "domains.governance": "Semantic readiness e cobertura de metadados/descrições no catálogo governado.",
+      "domains.performance": "Inventário de compute (warehouses + clusters), saúde de config, custo e latência de queries.",
+      "domains.usage": "Usuários ativos, adoção e padrões de uso na semana.",
+      "domains.genie": "Inventário de Agentes + visão de custo &amp; consumo de Genie (split por surface, grátis-vs-faturado).",
+      "domains.lakebase": "Postura das instâncias, native-login, roles, row-level security.",
+      "domains.reliability": "Taxa de falha das execuções de jobs.",
+      "finops.h": "FinOps &amp; observabilidade de custo",
+      "finops.p": "Tudo que é billado, legível para o administrador: <strong>o quê</strong> custa, <strong>quanto</strong>, <strong>quando</strong> e <strong>como</strong> é usado — tudo de <code>system.billing.usage</code>.",
+      "finops.l1": "<strong>Custo ao longo do tempo</strong> — gráfico evolutivo com filtro de período (30d / 90d / 6M / 12M ou um mês específico) e granularidade mensal/diária.",
+      "finops.l2": "<strong>Breakdown &amp; drill</strong> — treemap de custo por produto; clique para chegar a recurso, identidade, dono efetivo e tags.",
+      "finops.l3": "<strong>Drill do não-atribuído</strong> — gasto sem identidade run-as (warehouses, apps, jobs serverless) é resolvido a um dono efetivo, então “não-atribuído” é explicado, não escondido.",
+      "finops.l4": "<strong>Quem está usando</strong> — maiores consumidores por custo e DBUs, com explicações em linguagem simples de cada métrica.",
+      "aie.h": "AI Estate &amp; governança de AI Gateway",
+      "aie.p": "Para cada endpoint de model serving, o Compass mostra uma <strong>matriz de governança AI Gateway por endpoint</strong> e como ele está de fato sendo usado.",
+      "aie.l1": "<strong>Matriz de governança</strong> — usage tracking, payload logging, rate limits e guardrails por endpoint, agregados a um selo <em>Governado / Parcial / Não governado</em> e a um “% governado” do workspace.",
+      "aie.l2": "<strong>Uso &amp; quem usa</strong> — requisições, requesters distintos, tokens e taxa de erro de <code>system.serving.endpoint_usage</code>.",
+      "aie.l3": "<strong>Drill</strong> — clique num endpoint para ver a config completa e os principais requesters que o dirigem.",
+      "perf.h": "Performance &amp; inventário de compute",
+      "perf.p": "Além da latência de queries, o Compass inventaria o compute que fatura: <strong>SQL warehouses e clusters interativos</strong>, cada um com saúde de configuração (auto-stop, serverless, versão do DBR, auto-termination), custo de 30 dias, utilização e volume de queries — para achar compute ocioso ou mal configurado facilmente.",
+      "genie.h": "Genie &amp; custo de Genie",
+      "genie.p": "A tela Genie inventaria os Genie Agents e adiciona uma visão de <strong>custo &amp; consumo</strong>: o split entre as surfaces Genie Code e Genie Agents, uso grátis-vs-faturado por usuário contra a franquia mensal gratuita, e custo/DBUs ao longo do tempo.",
+      "waf.h": "Avaliação Well-Architected",
+      "waf.p": "Cada regra mapeia para um ou mais pilares do <strong>Databricks Well-Architected Framework</strong>. Um catálogo de controles é pontuado por pilar como <em>pass / gap / requer validação</em>, com uma banda de confiança para que um score alto com poucas checagens automatizadas não seja superestimado.",
+      "waf.p1": "Excelência Operacional", "waf.p2": "Segurança, Privacidade &amp; Conformidade", "waf.p3": "Confiabilidade", "waf.p4": "Eficiência de Performance", "waf.p5": "Otimização de Custo", "waf.p6": "Governança de Dados &amp; IA", "waf.p7": "Interoperabilidade &amp; Usabilidade",
+      "gr.h": "Genie Readiness",
+      "gr.p1": "Um <strong>score de prontidão de 0–100</strong> em sete pilares ponderados — a fundação de semântica de negócio do Unity Catalog que alimenta uma Genie Ontology aprendida — cada um com um nível de maturidade 0–4, sinais, gaps e orientação guiada por gaps.",
+      "gr.p2": "Os scores são funções determinísticas de sinais técnicos read-only (sem autoavaliação), então scans repetidos do mesmo workspace são diretamente comparáveis.",
+      "gr.th1": "Pilar", "gr.th2": "Fonte do sinal", "gr.th3": "Peso",
+      "gr.r1": "Riqueza de Metadados", "gr.r1d": "Cobertura de comentários de tabela &amp; coluna, tags governadas",
+      "gr.r2": "Métricas", "gr.r2d": "UC metric views &amp; suas descrições",
+      "gr.r3d": "Agentes &amp; atividade de 30 dias",
+      "gr.r4": "Fundação Unity Catalog", "gr.r4d": "Catálogos, schemas, footprint de tabelas",
+      "gr.r5": "Relacionamentos &amp; Modelagem", "gr.r5d": "Constraints PK/FK &amp; uma camada gold curada",
+      "gr.r6": "Domínios &amp; Stewardship", "gr.r6d": "Tags de domínio / steward, ativos certificados",
+      "gr.r7": "Adoção &amp; Atividade", "gr.r7d": "Usuários ativos &amp; volume de queries (30d)",
+      "gr.m0": "Ausente", "gr.m0d": "não presente", "gr.m1": "Inicial", "gr.m1d": "ad hoc / não curado",
+      "gr.m2": "Em desenvolvimento", "gr.m2d": "parcial, inconsistente", "gr.m3": "Estabelecido", "gr.m3d": "amplo, governado",
+      "gr.m4": "Otimizado", "gr.m4d": "abrangente, certificado",
+      "find.h": "Achados &amp; “como aplicar”",
+      "find.p": "Achados são os átomos do Compass: uma regra avaliada contra um recurso, com evidência, remediação e controles de framework — pesquisáveis e filtráveis por domínio e severidade, gravados append-only por scan para o histórico ser comparável.",
+      "find.tip.t": "Como aplicar (IA)",
+      "find.tip.p": "Cada achado tem uma ação <strong>“Ensinar como aplicar”</strong>: pergunta a um endpoint Claude governado por passos concretos de Databricks (caminhos de UI, SQL, verificação) para aplicar a correção — o redutor da curva de aprendizado para administradores. É orientação read-only; o Compass nunca executa.",
+      "find.l1": "<strong>Conformidade</strong> — mapeamento consultivo dos achados a frameworks de controle (um mapeamento, não uma alegação de certificação).",
+      "find.l2": "<strong>Manutenção</strong> — tarefas recorrentes de higiene geradas a partir das regras e da atualidade do scan.",
+      "find.l3": "<strong>Digest</strong> — um “o que mudou e o que corrigir primeiro” em linguagem simples, opcionalmente enviado a um canal.",
+      "agent.h": "Compass Agent",
+      "agent.p": "Um advisor governado e read-only sobre um serving endpoint. Ele explica achados, prioriza, e <strong>rascunha</strong> mudanças propostas com rollback e estimativa de blast-radius — citando ids de achado e regra, respeitando o workspace selecionado, e nunca executando. Um revisor com <code>CAN MANAGE</code> aprova; a mudança é aplicada fora do Compass.",
+      "rep.h": "Relatórios &amp; histórico",
+      "rep.l1": "<strong>Relatórios</strong> — um PDF premium por scan, gerado sob demanda e armazenado num Volume do Unity Catalog, com download no app.",
+      "rep.l2": "<strong>Histórico</strong> — um snapshot imutável por scan, para que tendências de score/cobertura e diffs de achados (novos / resolvidos / ainda abertos) entre dois scans sejam de primeira classe.",
+      "rep.l3": "<strong>Self-check</strong> — o Compass diagnostica a própria postura (governança do endpoint, grants de menor privilégio, atualidade do scan).",
+      "pr.h": "Princípios de design",
+      "pr.c1.h": "Read-only por construção", "pr.c1.p": "Collectors só leem. O agente propõe; humanos decidem. O Compass nunca executa uma mudança.",
+      "pr.c2.h": "Honesto, nunca fabricado", "pr.c2.p": "Uma fonte ausente é NOT_AVAILABLE com o grant exato necessário — não um zero confiante.",
+      "pr.c3.h": "Roda em qualquer workspace", "pr.c3.p": "Toda linha é workspace-scoped e append-only; o catálogo resolve por workspace, então habilitar um novo não exige mudança de código.",
+      "pr.c4.h": "Feito para reduzir a curva de aprendizado", "pr.c4.p": "UI multi-idioma, explicações em linguagem simples e “como aplicar” por IA em cada achado — para o admin não precisar de domínio profundo da plataforma.",
+      "foot.note": "Lakehouse Compass · diagnóstico read-only · o agente propõe, humanos decidem. Esta página explica o app; não é uma página oficial de produto Databricks.",
+      "toc.t": "Nesta página", "foot.left": "Lakehouse Compass — o médico da plataforma Databricks", "foot.right": "Diagnosticar · Governar · Agir"
+    },
+    es: {
+      "figure.caption": "El Overview de Compass — health score, puntajes por dominio, KPIs de costo y de gobernanza del AI Gateway, con el selector de idioma y el escaneo bajo demanda.",
+      "brand.tag": "el médico de la plataforma Databricks",
+      "top.tag": "Diagnóstico &amp; observabilidad de plataforma",
+      "nav.grp.start": "Empezar", "nav.overview": "Qué es Compass", "nav.how": "Cómo funciona",
+      "nav.grp.diagnose": "Diagnosticar", "nav.domains": "Los dominios", "nav.finops": "FinOps &amp; observabilidad",
+      "nav.aiestate": "AI Estate &amp; AI Gateway", "nav.performance": "Inventario de compute", "nav.genie": "Genie &amp; costo",
+      "nav.waf": "Well-Architected", "nav.genieready": "Genie Readiness",
+      "nav.grp.act": "Actuar", "nav.findings": "Hallazgos &amp; cómo aplicar", "nav.agent": "Compass Agent", "nav.reports": "Reportes &amp; historial",
+      "nav.grp.operate": "Operar", "nav.principles": "Principios de diseño",
+      "hero.eyebrow": "Diagnóstico &amp; observabilidad de plataforma",
+      "hero.lead": "Una herramienta <strong>read-only de check-up y observabilidad de tu plataforma Databricks</strong>, por workspace. Compass escanea System Tables y APIs de plataforma, califica tu entorno contra el Well-Architected Framework, muestra a dónde van el costo y el uso, y prioriza hallazgos con remediación — y nunca cambia nada. Cada pantalla muestra un <em>NOT AVAILABLE</em> honesto donde una fuente no se puede leer.",
+      "hero.kpi1": "dominios de diagnóstico", "hero.kpi2": "pilares WAF calificados", "hero.kpi3": "idiomas de la UI (EN · PT · ES)", "hero.kpi4": "cambios ejecutados — solo consultivo",
+      "overview.h": "Qué es Compass",
+      "overview.p1": "Lakehouse Compass es una app de diagnóstico y observabilidad que corre íntegramente en la plataforma Databricks. Responde una pregunta del administrador del workspace — <em>“¿Mi workspace está sano, gobernado y eficiente en costo, y por dónde empiezo a corregir?”</em> — sin requerir dominio profundo de la plataforma.",
+      "overview.p2": "Nunca cambia nada. Cada collector es read-only; el Agente <strong>propone</strong> cambios para que un humano con <code>CAN MANAGE</code> apruebe, y la ejecución ocurre fuera de Compass. Donde falta una fuente o un grant, la pantalla lo dice exactamente en vez de inventar un número. Corre en <strong>cualquier workspace</strong> — el catálogo se resuelve por workspace, así que habilitar uno nuevo no requiere cambios de código.",
+      "overview.tip.t": "Multi-idioma, pensado para el admin",
+      "overview.tip.p": "Toda la UI está disponible en <strong>English, Português-BR y Español</strong>, y cada hallazgo ofrece un “cómo aplicar” paso a paso generado por IA — para que un administrador que no conoce la plataforma a fondo pueda actuar con confianza.",
+      "how.h": "Cómo funciona", "how.p": "Tres partes, desacopladas por el almacenamiento en Delta:",
+      "how.c1.h": "Scan", "how.c1.p": "Un job serverless corre los collectors read-only contra System Tables y APIs de plataforma, por workspace, y agrega resultados a Delta. Dispáralo bajo demanda desde la app, o por agenda.",
+      "how.c2.h": "Store", "how.c2.p": "Hallazgos, scores, costo, uso, gobernanza y readiness caen en el esquema de Compass (<code>&lt;catalog&gt;.lakehouse_compass.*</code>), indexados por scan y workspace — el historial se acumula.",
+      "how.c3.h": "App", "how.c3.p": "Una app React lee el último scan del workspace seleccionado, con fallback demo para que cada pantalla siempre renderice. Idioma y workspace se cambian en la barra superior.",
+      "how.note.t": "Disponibilidad honesta",
+      "how.note.p": "Un collector que no puede leer su fuente resuelve esa capacidad como <strong>NOT_AVAILABLE</strong> y no genera hallazgos — nunca un score fabricado. La cobertura (la fracción de fuentes utilizables) se muestra junto a cada score, para que un número alto con poca verificación no se confunda con salud comprobada.",
+      "domains.h": "Los dominios",
+      "domains.p": "El score general es un promedio ponderado de los scores por dominio; cada dominio empieza en 100 y se reduce por la severidad de sus hallazgos abiertos. Destacados abajo.",
+      "domains.th1": "Dominio", "domains.th2": "Qué entrega", "domains.th3": "Peso",
+      "domains.overview": "Scores general y por dominio, fecha del último scan, botón “Ejecutar scan” bajo demanda y un KPI de “% gobernado en AI Gateway”.",
+      "domains.security": "Postura y hallazgos abiertos por severidad — principals con exceso de privilegio, grants amplios, PAT vs OAuth.",
+      "domains.finops": "Observabilidad de costo: gasto en el tiempo, por producto/identidad/dueño, drill de lo no atribuido.",
+      "domains.aiestate": "Matriz de gobernanza AI Gateway por endpoint + quién usa cada endpoint.",
+      "domains.governance": "Semantic readiness y cobertura de metadatos/descripciones en el catálogo gobernado.",
+      "domains.performance": "Inventario de compute (warehouses + clusters), salud de config, costo y latencia de queries.",
+      "domains.usage": "Usuarios activos, adopción y patrones de uso en la semana.",
+      "domains.genie": "Inventario de Agentes + una vista de costo &amp; consumo de Genie (split por surface, gratis-vs-facturado).",
+      "domains.lakebase": "Postura de instancias, native-login, roles, row-level security.",
+      "domains.reliability": "Tasa de fallo de las ejecuciones de jobs.",
+      "finops.h": "FinOps &amp; observabilidad de costo",
+      "finops.p": "Todo lo facturado, legible para el administrador: <strong>qué</strong> cuesta, <strong>cuánto</strong>, <strong>cuándo</strong> y <strong>cómo</strong> se usa — todo desde <code>system.billing.usage</code>.",
+      "finops.l1": "<strong>Costo en el tiempo</strong> — un gráfico evolutivo con filtro de período (30d / 90d / 6M / 12M o un mes específico) y granularidad mensual/diaria.",
+      "finops.l2": "<strong>Desglose &amp; drill</strong> — un treemap de costo por producto; haz clic hasta recurso, identidad, dueño efectivo y tags.",
+      "finops.l3": "<strong>Drill de lo no atribuido</strong> — el gasto sin identidad run-as (warehouses, apps, jobs serverless) se resuelve a un dueño efectivo, así “no atribuido” se explica, no se esconde.",
+      "finops.l4": "<strong>Quién lo está usando</strong> — mayores consumidores por costo y DBUs, con explicaciones en lenguaje simple de cada métrica.",
+      "aie.h": "AI Estate &amp; gobernanza de AI Gateway",
+      "aie.p": "Para cada endpoint de model serving, Compass muestra una <strong>matriz de gobernanza AI Gateway por endpoint</strong> y cómo se está usando realmente.",
+      "aie.l1": "<strong>Matriz de gobernanza</strong> — usage tracking, payload logging, rate limits y guardrails por endpoint, agregados a un badge <em>Gobernado / Parcial / No gobernado</em> y a un “% gobernado” del workspace.",
+      "aie.l2": "<strong>Uso &amp; quién lo usa</strong> — solicitudes, requesters distintos, tokens y tasa de error desde <code>system.serving.endpoint_usage</code>.",
+      "aie.l3": "<strong>Drill</strong> — haz clic en un endpoint para ver su configuración completa y los principales requesters que lo impulsan.",
+      "perf.h": "Performance &amp; inventario de compute",
+      "perf.p": "Más allá de la latencia de queries, Compass inventaria el compute que factura: <strong>SQL warehouses y clusters interactivos</strong>, cada uno con su salud de configuración (auto-stop, serverless, versión de DBR, auto-termination), costo de 30 días, utilización y volumen de queries — para detectar fácilmente compute ocioso o mal configurado.",
+      "genie.h": "Genie &amp; costo de Genie",
+      "genie.p": "La pantalla Genie inventaria los Genie Agents y agrega una vista de <strong>costo &amp; consumo</strong>: el split entre las surfaces Genie Code y Genie Agents, uso gratis-vs-facturado por usuario contra la franquicia mensual gratuita, y costo/DBUs en el tiempo.",
+      "waf.h": "Evaluación Well-Architected",
+      "waf.p": "Cada regla mapea a uno o más pilares del <strong>Databricks Well-Architected Framework</strong>. Un catálogo de controles se califica por pilar como <em>pass / gap / requiere validación</em>, con una banda de confianza para que un score alto con pocas verificaciones automatizadas no se sobreestime.",
+      "waf.p1": "Excelencia Operacional", "waf.p2": "Seguridad, Privacidad &amp; Cumplimiento", "waf.p3": "Confiabilidad", "waf.p4": "Eficiencia de Performance", "waf.p5": "Optimización de Costo", "waf.p6": "Gobernanza de Datos &amp; IA", "waf.p7": "Interoperabilidad &amp; Usabilidad",
+      "gr.h": "Genie Readiness",
+      "gr.p1": "Un <strong>score de preparación de 0–100</strong> en siete pilares ponderados — la base de semántica de negocio de Unity Catalog que alimenta una Genie Ontology aprendida — cada uno con un nivel de madurez 0–4, señales, gaps y orientación guiada por gaps.",
+      "gr.p2": "Los scores son funciones deterministas de señales técnicas read-only (sin autoevaluación), así que scans repetidos del mismo workspace son directamente comparables.",
+      "gr.th1": "Pilar", "gr.th2": "Fuente de la señal", "gr.th3": "Peso",
+      "gr.r1": "Riqueza de Metadatos", "gr.r1d": "Cobertura de comentarios de tabla &amp; columna, tags gobernadas",
+      "gr.r2": "Métricas", "gr.r2d": "UC metric views &amp; sus descripciones",
+      "gr.r3d": "Agentes &amp; actividad de 30 días",
+      "gr.r4": "Base de Unity Catalog", "gr.r4d": "Catálogos, esquemas, footprint de tablas",
+      "gr.r5": "Relaciones &amp; Modelado", "gr.r5d": "Constraints PK/FK &amp; una capa gold curada",
+      "gr.r6": "Dominios &amp; Stewardship", "gr.r6d": "Tags de dominio / steward, activos certificados",
+      "gr.r7": "Adopción &amp; Actividad", "gr.r7d": "Usuarios activos &amp; volumen de queries (30d)",
+      "gr.m0": "Ausente", "gr.m0d": "no presente", "gr.m1": "Inicial", "gr.m1d": "ad hoc / sin curar",
+      "gr.m2": "En desarrollo", "gr.m2d": "parcial, inconsistente", "gr.m3": "Establecido", "gr.m3d": "amplio, gobernado",
+      "gr.m4": "Optimizado", "gr.m4d": "integral, certificado",
+      "find.h": "Hallazgos &amp; “cómo aplicar”",
+      "find.p": "Los hallazgos son los átomos de Compass: una regla evaluada contra un recurso, con evidencia, remediación y controles de framework — buscables y filtrables por dominio y severidad, escritos append-only por scan para que el historial sea comparable.",
+      "find.tip.t": "Cómo aplicar (IA)",
+      "find.tip.p": "Cada hallazgo tiene una acción <strong>“Enséñame cómo aplicar”</strong>: pregunta a un endpoint Claude gobernado por pasos concretos de Databricks (rutas de UI, SQL, verificación) para aplicar la corrección — el reductor de la curva de aprendizaje para administradores. Es orientación read-only; Compass nunca ejecuta.",
+      "find.l1": "<strong>Cumplimiento</strong> — mapeo consultivo de los hallazgos a frameworks de control (un mapeo, no una afirmación de certificación).",
+      "find.l2": "<strong>Mantenimiento</strong> — tareas recurrentes de higiene generadas a partir de las reglas y la vigencia del scan.",
+      "find.l3": "<strong>Digest</strong> — un “qué cambió y qué corregir primero” en lenguaje simple, opcionalmente enviado a un canal.",
+      "agent.h": "Compass Agent",
+      "agent.p": "Un advisor gobernado y read-only sobre un serving endpoint. Explica hallazgos, los prioriza, y <strong>redacta</strong> cambios propuestos con rollback y estimación de blast-radius — citando ids de hallazgo y regla, respetando el workspace seleccionado, y nunca ejecutando. Un revisor con <code>CAN MANAGE</code> aprueba; el cambio se aplica fuera de Compass.",
+      "rep.h": "Reportes &amp; historial",
+      "rep.l1": "<strong>Reportes</strong> — un PDF premium por scan, generado bajo demanda y almacenado en un Volume de Unity Catalog, descargable en la app.",
+      "rep.l2": "<strong>Historial</strong> — un snapshot inmutable por scan, para que las tendencias de score/cobertura y los diffs de hallazgos (nuevos / resueltos / aún abiertos) entre dos scans sean de primera clase.",
+      "rep.l3": "<strong>Self-check</strong> — Compass diagnostica su propia postura (gobernanza del endpoint, grants de menor privilegio, vigencia del scan).",
+      "pr.h": "Principios de diseño",
+      "pr.c1.h": "Read-only por construcción", "pr.c1.p": "Los collectors solo leen. El agente propone; los humanos deciden. Compass nunca ejecuta un cambio.",
+      "pr.c2.h": "Honesto, nunca fabricado", "pr.c2.p": "Una fuente ausente es NOT_AVAILABLE con el grant exacto necesario — no un cero confiado.",
+      "pr.c3.h": "Corre en cualquier workspace", "pr.c3.p": "Cada fila es workspace-scoped y append-only; el catálogo se resuelve por workspace, así que habilitar uno nuevo no requiere cambios de código.",
+      "pr.c4.h": "Diseñado para bajar la curva de aprendizaje", "pr.c4.p": "UI multi-idioma, explicaciones en lenguaje simple y “cómo aplicar” por IA en cada hallazgo — para que el admin no necesite dominio profundo de la plataforma.",
+      "foot.note": "Lakehouse Compass · diagnóstico read-only · el agente propone, los humanos deciden. Esta página explica la app; no es una página oficial de producto Databricks.",
+      "toc.t": "En esta página", "foot.left": "Lakehouse Compass — el médico de la plataforma Databricks", "foot.right": "Diagnosticar · Gobernar · Actuar"
+    }
+  };
+
+  // ---- language engine ----
+  (function () {
+    var root = document.documentElement;
+    var LANGS = { en: "en", pt: "pt", es: "es" };
+    function readLang() {
+      try { var s = localStorage.getItem('compass_docs_lang'); if (s && LANGS[s]) return s; } catch (e) {}
+      return 'en';
+    }
+    function apply(lang) {
+      var dict = I18N[lang] || I18N.en;
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        var k = el.getAttribute('data-i18n');
+        var v = dict[k];
+        if (v == null) v = I18N.en[k];
+        if (v != null) el.innerHTML = v;
+      });
+      root.setAttribute('lang', lang === 'pt' ? 'pt-BR' : lang);
+      document.querySelectorAll('.langsw button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+      });
+      buildToc();
+    }
+    function setLang(lang) {
+      if (!LANGS[lang]) lang = 'en';
+      try { localStorage.setItem('compass_docs_lang', lang); } catch (e) {}
+      apply(lang);
+    }
+    document.querySelectorAll('.langsw button').forEach(function (b) {
+      b.addEventListener('click', function () { setLang(b.getAttribute('data-lang')); });
+    });
+    window.__setLang = setLang;
+    window.__applyLang = function () { apply(readLang()); };
+  })();
+
   // theme toggle (per-viewer convenience; wrapped for private-mode safety)
   (function () {
     var root = document.documentElement;
@@ -541,30 +859,35 @@ databricks bundle run compass_app -t dev -p fevm-moi-ai</pre>
     document.querySelectorAll('nav.side a').forEach(function (a) { a.addEventListener('click', close); });
   })();
 
-  // build right-hand TOC from the h2s
-  (function () {
+  // build right-hand TOC from the h2s (re-run on language change)
+  function buildToc() {
     var toc = document.getElementById('tocLinks');
     if (!toc) return;
+    toc.innerHTML = '';
     var heads = Array.prototype.slice.call(document.querySelectorAll('main h2[id]'));
     heads.forEach(function (h) {
       var a = document.createElement('a');
       a.href = '#' + h.id;
-      a.textContent = h.textContent.replace('#', '').replace('NEW', '').trim();
+      a.textContent = h.textContent.replace('#', '').trim();
       toc.appendChild(a);
     });
-    // scrollspy across both sidebars
     var links = Array.prototype.slice.call(document.querySelectorAll('nav.side a[href^="#"], aside.toc a[href^="#"]'));
     var byId = {};
     links.forEach(function (l) { var id = l.getAttribute('href').slice(1); (byId[id] = byId[id] || []).push(l); });
     var targets = Array.prototype.slice.call(document.querySelectorAll('main h2[id]'));
     if (!('IntersectionObserver' in window)) return;
-    var io = new IntersectionObserver(function (entries) {
+    if (window.__io) window.__io.disconnect();
+    window.__io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (!en.isIntersecting) return;
         links.forEach(function (l) { l.classList.remove('active'); });
         (byId[en.target.id] || []).forEach(function (l) { l.classList.add('active'); });
       });
     }, { rootMargin: '-64px 0px -70% 0px', threshold: 0 });
-    targets.forEach(function (t) { io.observe(t); });
-  })();
+    targets.forEach(function (t) { window.__io.observe(t); });
+  }
+
+  // init language (also builds the TOC)
+  window.__applyLang();
 </script>
+</html>
