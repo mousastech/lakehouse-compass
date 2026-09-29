@@ -2,6 +2,9 @@ export interface Bar {
   label: string;
   value: number;
   color?: string; // CSS var name, e.g. '--primary'
+  // Optional stacked segments (bottom-to-top). When present, the bar is drawn
+  // as a stack and `value` should equal the sum of the segment values.
+  segments?: { value: number; color: string }[];
 }
 
 /** A dependency-free vertical bar chart (SVG), themed via CSS vars. Used for the
@@ -55,10 +58,28 @@ export function BarChart({
         const h = Math.max(0, ((b.value / niceMax) * plotH));
         return (
           <g key={b.label + i}>
-            <rect x={cx(i) - barW / 2} y={y(b.value)} width={barW} height={h} rx={2}
-              style={{ fill: `var(${b.color || defaultColor})` }}>
-              <title>{`${b.label}: ${valueFmt(b.value)}`}</title>
-            </rect>
+            {b.segments && b.segments.length > 0 ? (
+              // Stacked segments, drawn bottom-to-top.
+              (() => {
+                let acc = 0;
+                return b.segments.map((seg, si) => {
+                  const segH = (seg.value / niceMax) * plotH;
+                  const yTop = padT + plotH - (acc + seg.value) / niceMax * plotH;
+                  acc += seg.value;
+                  return (
+                    <rect key={si} x={cx(i) - barW / 2} y={yTop} width={barW} height={Math.max(0, segH)} rx={1}
+                      style={{ fill: `var(${seg.color})` }}>
+                      <title>{`${b.label}: ${valueFmt(seg.value)}`}</title>
+                    </rect>
+                  );
+                });
+              })()
+            ) : (
+              <rect x={cx(i) - barW / 2} y={y(b.value)} width={barW} height={h} rx={2}
+                style={{ fill: `var(${b.color || defaultColor})` }}>
+                <title>{`${b.label}: ${valueFmt(b.value)}`}</title>
+              </rect>
+            )}
             <text
               x={rotate ? cx(i) : cx(i)}
               y={height - padB + (rotate ? 12 : 14)}

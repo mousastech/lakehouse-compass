@@ -186,6 +186,7 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("space_id"), S("title"),
             S("owner"), S("has_description", BooleanType()), S("tables", LongType()),
             S("msgs_30d", LongType()), S("users_30d", LongType()), S("trend_pct", DoubleType()),
+            S("free_value_usd", DoubleType()), S("billed_usd", DoubleType()),
             S("cost_usd_30d", DoubleType()), S("setup_score", LongType()), S("usage_status"),
         ]),
         "lakebase_inventory": StructType([
@@ -496,9 +497,44 @@ def run_live(args) -> None:
                         GROUP BY 1
                     """).collect()]
                     usage_by_space = {str(r.get("space_id")): r for r in _usage if r.get("space_id")}
+                    # Per-space Genie cost: agent_id = space_id in billing. Split
+                    # GENIE_FREE_USAGE (free) from paid, and price free DBUs at the
+                    # measured effective rate so free "value" is comparable to billed.
+                    cost_by_space: dict = {}
+                    try:
+                        _cost = [r.asDict(recursive=True) for r in spark.sql(f"""
+                            SELECT u.usage_metadata.genie.agent_id AS space_id,
+                                   ROUND(SUM(CASE WHEN u.sku_name='GENIE_FREE_USAGE' THEN u.usage_quantity ELSE 0 END), 4) AS free_dbus,
+                                   ROUND(SUM(CASE WHEN u.sku_name<>'GENIE_FREE_USAGE' THEN u.usage_quantity ELSE 0 END), 4) AS billed_dbus,
+                                   ROUND(SUM(u.usage_quantity * COALESCE(lp.pricing.default, 0)), 4) AS billed_cost
+                            FROM system.billing.usage u
+                            LEFT JOIN system.billing.list_prices lp
+                              ON u.sku_name = lp.sku_name AND u.usage_unit = lp.usage_unit
+                             AND u.usage_end_time >= lp.price_start_time
+                             AND (u.usage_end_time < lp.price_end_time OR lp.price_end_time IS NULL)
+                            WHERE u.workspace_id='{ws}' AND u.billing_origin_product='GENIE'
+                              AND u.usage_metadata.genie.agent_id IS NOT NULL
+                              AND u.usage_date >= DATEADD(DAY, -{args.window_days}, CURRENT_DATE())
+                            GROUP BY 1
+                        """).collect()]
+                        # Effective $/DBU from ALL Genie billing (Genie Code bills
+                        # but carries no space id; agent usage is mostly free), so
+                        # free "value" per space is priced at the real paid rate.
+                        _bc = sum(float(r.get("billed_cost_usd") or 0) for r in genie_cost_summary)
+                        _bd = sum(float(r.get("billed_dbus") or 0) for r in genie_cost_summary)
+                        _rate = (_bc / _bd) if _bd > 0 else 0.0
+                        for r in _cost:
+                            sid = str(r.get("space_id") or "")
+                            if sid:
+                                cost_by_space[sid] = {
+                                    "billed": float(r.get("billed_cost") or 0.0),
+                                    "free_value": float(r.get("free_dbus") or 0.0) * _rate,
+                                }
+                    except Exception as e:  # pragma: no cover
+                        print(f"[compass] genie per-space cost unavailable: {str(e)[:160]}")
                     genie_space_inventory = build_space_inventory(
                         scan_id=scan_id, workspace_id=ws, workspace_name=ws_name,
-                        space_rows=genie_inventory, usage_by_space=usage_by_space,
+                        space_rows=genie_inventory, usage_by_space=usage_by_space, cost_by_space=cost_by_space,
                     )
                 except Exception as e:  # pragma: no cover - defensive
                     print(f"[compass] genie_space_inventory unavailable: {str(e)[:200]}")

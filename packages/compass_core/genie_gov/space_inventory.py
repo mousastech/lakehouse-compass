@@ -59,8 +59,10 @@ def build_space_inventory(
     workspace_name: str,
     space_rows: list[dict[str, Any]] | None = None,
     usage_by_space: dict[str, dict[str, Any]] | None = None,
-    cost_by_space: dict[str, float] | None = None,
+    cost_by_space: dict[str, dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
+    # cost_by_space maps space_id -> {"free_value": <usd>, "billed": <usd>}; a
+    # missing space is $0 (only agent spaces carry a space id in billing).
     space_rows = space_rows or []
     usage_by_space = usage_by_space or {}
     cost_by_space = cost_by_space or {}
@@ -77,6 +79,9 @@ def build_space_inventory(
         users = int(u.get("users_30d") or 0)
         msgs_7d = int(u.get("msgs_7d") or 0)
         msgs_prev_7d = int(u.get("msgs_prev_7d") or 0)
+        c = cost_by_space.get(sid, {})
+        free_value = float(c.get("free_value") or 0.0)
+        billed = float(c.get("billed") or 0.0)
         out.append({
             "scan_id": scan_id,
             "workspace_id": workspace_id,
@@ -89,7 +94,9 @@ def build_space_inventory(
             "msgs_30d": msgs,
             "users_30d": users,
             "trend_pct": _trend_pct(msgs_7d, msgs_prev_7d),
-            "cost_usd_30d": round(float(cost_by_space.get(sid, 0.0)), 2),
+            "free_value_usd": round(free_value, 2),
+            "billed_usd": round(billed, 2),
+            "cost_usd_30d": round(billed, 2),
             "setup_score": setup_score(has_desc, tables),
             "usage_status": usage_status(msgs, users),
         })

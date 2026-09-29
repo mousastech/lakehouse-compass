@@ -35,14 +35,16 @@ def test_build_joins_usage_cost_and_sorts_by_msgs():
             "a": {"msgs_30d": 80, "users_30d": 4, "msgs_7d": 30, "msgs_prev_7d": 20},
             "b": {"msgs_30d": 0, "users_30d": 0, "msgs_7d": 0, "msgs_prev_7d": 0},
         },
-        cost_by_space={"a": 12.5},
+        cost_by_space={"a": {"billed": 12.5, "free_value": 3.0}},
     )
     assert [r["space_id"] for r in rows] == ["a", "b"]  # busy first
     a = rows[0]
     assert a["usage_status"] == "Active" and a["setup_score"] == 100
     assert a["trend_pct"] == 50.0 and a["cost_usd_30d"] == 12.5 and a["owner"] == "u@x"
+    assert a["billed_usd"] == 12.5 and a["free_value_usd"] == 3.0
     b = rows[1]
     assert b["usage_status"] == "Unused" and b["setup_score"] == 0 and b["cost_usd_30d"] == 0.0
+    assert b["billed_usd"] == 0.0 and b["free_value_usd"] == 0.0
 
 
 def test_trend_handles_zero_prior_week():

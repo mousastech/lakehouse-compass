@@ -64,6 +64,7 @@ function CostConsumption() {
   const { ws } = useWorkspace();
   const summaryQ = useLiveRows('genie_cost_summary', '/api/rows/genie_cost_summary', ws);
   const usersQ = useLiveRows('genie_cost_by_user', '/api/rows/genie_cost_by_user', ws);
+  const spacesQ = useLiveRows('genie_space_inventory', '/api/rows/genie_space_inventory', ws);
 
   if (summaryQ.loading) return <p className="text-sm text-muted-foreground">…</p>;
 
@@ -106,6 +107,21 @@ function CostConsumption() {
   const freeValue = freeDbus * effRate;
   const totalValue = freeValue + billedCost;
   const pctFree = totalValue > 0 ? Math.round((100 * freeValue) / totalValue) : 0;
+
+  // Cost by space — per-space free value (green) + billed (blue), stacked.
+  const spaceCostBars: Bar[] = spacesQ.rows
+    .map((r) => ({ title: toStr(r.title) || toStr(r.space_id), free: toNum(r.free_value_usd), billed: toNum(r.billed_usd) }))
+    .map((s) => ({ label: s.title, total: s.free + s.billed, free: s.free, billed: s.billed }))
+    .filter((s) => s.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+    .map((s) => ({
+      label: s.label, value: s.total,
+      segments: [
+        { value: s.free, color: '--domain-finops' },
+        { value: s.billed, color: '--domain-usage' },
+      ],
+    }));
 
   const kpis = [
     { icon: DollarSign, label: t('genie.cost.billedCost'), value: usd(billedCost), color: 'var(--domain-finops)' },
@@ -191,6 +207,23 @@ function CostConsumption() {
           <p className="text-xs text-muted-foreground">—</p>
         ) : (
           <BarChart bars={surfaceBars} height={220} yLabel="DBUs" rotateLabels={false} valueFmt={(n) => dbu(n)} />
+        )}
+      </div>
+
+      {/* Cost by space — free value (green) vs billed (blue), stacked per space. */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-card-foreground">{t('genie.cost.bySpace')}</h3>
+          <span className="text-[11px] text-muted-foreground">{t('genie.cost.bySpaceHint')}</span>
+        </div>
+        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: 'var(--domain-finops)' }} />{t('genie.cost.splitFree')}</span>
+          <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: 'var(--domain-usage)' }} />{t('genie.cost.splitBilled')}</span>
+        </div>
+        {spaceCostBars.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t('genie.cost.bySpaceNa')}</p>
+        ) : (
+          <BarChart bars={spaceCostBars} height={260} yLabel="$" valueFmt={(n) => usd(n)} />
         )}
       </div>
 
