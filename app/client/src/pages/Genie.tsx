@@ -7,6 +7,7 @@ import { toNum, toStr, toBool } from '../lib/rows';
 import { NotAvailable, SourceBadge } from '../components/SourceBadge';
 import { FindingsList } from '../components/FindingsList';
 import { GenieCostTrend } from '../components/GenieCostTrend';
+import { BarChart, type Bar } from '../components/BarChart';
 
 interface GenieSpace {
   space_id: string;
@@ -94,7 +95,9 @@ function CostConsumption() {
     'surface', ['list_cost', 'free_dbus', 'billed_dbus', 'dbus'],
   ) as unknown as SurfaceRow[]).sort((a, b) => b.dbus - a.dbus);
 
-  const maxDbus = Math.max(1, ...surfaces.map((x) => toNum(x.dbus)));
+  const surfaceBars: Bar[] = surfaces.map((x) => ({
+    label: toStr(x.surface), value: toNum(x.dbus), color: '--domain-genie',
+  }));
 
   const kpis = [
     { icon: DollarSign, label: t('genie.cost.billedCost'), value: usd(billedCost), color: 'var(--domain-finops)' },
@@ -157,23 +160,11 @@ function CostConsumption() {
       <div className="rounded-xl border border-border bg-card p-4">
         <h3 className="text-sm font-semibold text-card-foreground">{t('genie.cost.bySurface')}</h3>
         <p className="mb-3 text-[11px] text-muted-foreground">{t('genie.cost.surfaceNote')}</p>
-        <div className="space-y-2">
-          {surfaces.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
-          {surfaces.map((x) => (
-            <div key={x.surface}>
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-card-foreground">{toStr(x.surface)}</span>
-                <span className="tnum text-muted-foreground">{usd(toNum(x.list_cost))} · {dbu(toNum(x.dbus))} DBUs</span>
-              </div>
-              <div className="mt-1 h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full"
-                  style={{ width: `${Math.round((toNum(x.dbus) / maxDbus) * 100)}%`, background: 'var(--domain-genie)' }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        {surfaceBars.length === 0 ? (
+          <p className="text-xs text-muted-foreground">—</p>
+        ) : (
+          <BarChart bars={surfaceBars} height={220} yLabel="DBUs" rotateLabels={false} valueFmt={(n) => dbu(n)} />
+        )}
       </div>
 
       {/* Free vs billed per user */}

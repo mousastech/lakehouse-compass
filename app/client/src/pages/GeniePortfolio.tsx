@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { LayoutGrid, Wifi, WifiOff } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { useLiveRows } from '../lib/analytics';
@@ -6,28 +6,28 @@ import { useWorkspace } from '../lib/workspace';
 import { toStr, toNum } from '../lib/rows';
 import { useT } from '../lib/i18n';
 import { KpiCard } from '../components/KpiCard';
+import { BarChart, type Bar } from '../components/BarChart';
+import { SeriesChart } from '../components/SeriesChart';
 
 interface Space {
   title: string;
   owner: string;
   hasDescription: boolean;
   msgs: number;
+  users: number;
   setupScore: number;
   status: string;
 }
 
-const STATUS_VAR: Record<string, string> = {
-  Active: '--domain-finops',
-  'Low use': '--sev-medium',
-  Unused: '--sev-high',
-};
-
-/** Genie Portfolio Overview — fleet-level health of every Genie space: how much
- * is actively leveraged vs stalling, and what needs attention. */
+/** Genie Portfolio Overview — fleet health of every Genie space, with the same
+ * charts as the reference governance console: activity by top space, leverage
+ * breakdown, and the weekly adoption trend. */
 export function GeniePortfolio() {
   const t = useT();
   const { ws } = useWorkspace();
   const { rows, loading, source } = useLiveRows('genie_space_inventory', '/api/rows/genie_space_inventory', ws);
+  const trend = useLiveRows('usage_active_users_trend', '/api/rows/usage_active_users_trend', ws);
+  const [metric, setMetric] = useState<'msgs' | 'users'>('msgs');
 
   const spaces = useMemo<Space[]>(
     () =>
@@ -36,6 +36,7 @@ export function GeniePortfolio() {
         owner: toStr(r.owner),
         hasDescription: !!r.has_description,
         msgs: toNum(r.msgs_30d),
+        users: toNum(r.users_30d),
         setupScore: toNum(r.setup_score),
         status: toStr(r.usage_status) || 'Unused',
       })),
@@ -48,17 +49,34 @@ export function GeniePortfolio() {
     const low = spaces.filter((s) => s.status === 'Low use').length;
     const unused = spaces.filter((s) => s.status === 'Unused').length;
     const noOwner = spaces.filter((s) => !s.owner).length;
-    const noDesc = spaces.filter((s) => !s.hasDescription).length;
     const msgs = spaces.reduce((a, s) => a + s.msgs, 0);
     const avgSetup = total ? Math.round(spaces.reduce((a, s) => a + s.setupScore, 0) / total) : 0;
     const leverage = total ? Math.round((100 * active) / total) : 0;
     const attention = spaces.filter((s) => s.status === 'Unused' || !s.owner || !s.hasDescription).length;
-    const top = [...spaces].sort((a, b) => b.msgs - a.msgs).slice(0, 8);
-    const maxMsgs = top.length ? Math.max(...top.map((s) => s.msgs), 1) : 1;
-    return { total, active, low, unused, noOwner, noDesc, msgs, avgSetup, leverage, attention, top, maxMsgs };
+    return { total, active, low, unused, noOwner, msgs, avgSetup, leverage, attention };
   }, [spaces]);
 
-  const seg = (n: number) => (m.total ? `${(100 * n) / m.total}%` : '0%');
+  const activityBars = useMemo<Bar[]>(() => {
+    const key = metric === 'msgs' ? 'msgs' : 'users';
+    return [...spaces].sort((a, b) => b[key] - a[key]).slice(0, 10).map((s) => ({ label: s.title, value: s[key], color: '--primary' }));
+  }, [spaces, metric]);
+
+  const leverageBars = useMemo<Bar[]>(
+    () => [
+      { label: t('geniespaces.status.Active'), value: m.active, color: '--domain-finops' },
+      { label: t('geniespaces.status.Lowuse'), value: m.low, color: '--sev-medium' },
+      { label: t('geniespaces.status.Unused'), value: m.unused, color: '--sev-high' },
+    ],
+    [m, t],
+  );
+
+  const trendData = useMemo(() => {
+    const sorted = [...trend.rows].sort((a, b) => toStr(a.period_start).localeCompare(toStr(b.period_start)));
+    return {
+      labels: sorted.map((r) => toStr(r.period_start)),
+      genie: sorted.map((r) => toNum(r.genie_users)),
+    };
+  }, [trend.rows]);
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-5">
@@ -91,33 +109,45 @@ export function GeniePortfolio() {
             <KpiCard label={t('genieportfolio.avgSetup')} value={`${m.avgSetup}%`} accentVar="--domain-genie" />
           </div>
 
-          <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold text-card-foreground">{t('genieportfolio.leverageBreakdown')}</h2>
-            <div className="flex h-4 w-full overflow-hidden rounded-full">
-              <div style={{ width: seg(m.active), background: 'var(--domain-finops)' }} title={`Active ${m.active}`} />
-              <div style={{ width: seg(m.low), background: 'var(--sev-medium)' }} title={`Low use ${m.low}`} />
-              <div style={{ width: seg(m.unused), background: 'var(--sev-high)' }} title={`Unused ${m.unused}`} />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
-              <span><span style={{ color: 'var(--domain-finops)' }}>●</span> {t('geniespaces.status.Active')} {m.active}</span>
-              <span><span style={{ color: 'var(--sev-medium)' }}>●</span> {t('geniespaces.status.Lowuse')} {m.low}</span>
-              <span><span style={{ color: 'var(--sev-high)' }}>●</span> {t('geniespaces.status.Unused')} {m.unused}</span>
-            </div>
-          </section>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <section className="rounded-xl border border-border bg-card p-4 lg:col-span-2">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-card-foreground">{t('genieportfolio.activity')}</h2>
+                <div className="inline-flex overflow-hidden rounded-md border border-border text-xs">
+                  <button type="button" onClick={() => setMetric('msgs')}
+                    className={`px-2.5 py-1 font-medium ${metric === 'msgs' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+                    {t('genieportfolio.messages')}
+                  </button>
+                  <button type="button" onClick={() => setMetric('users')}
+                    className={`px-2.5 py-1 font-medium ${metric === 'users' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+                    {t('genieportfolio.users')}
+                  </button>
+                </div>
+              </div>
+              <BarChart bars={activityBars} height={260}
+                yLabel={metric === 'msgs' ? t('genieportfolio.messages') : t('genieportfolio.users')} />
+            </section>
+
+            <section className="rounded-xl border border-border bg-card p-4">
+              <h2 className="mb-3 text-sm font-semibold text-card-foreground">{t('genieportfolio.leverageBreakdown')}</h2>
+              <BarChart bars={leverageBars} height={260} yLabel={t('genieportfolio.spaces')} rotateLabels={false} />
+            </section>
+          </div>
 
           <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold text-card-foreground">{t('genieportfolio.topSpaces')}</h2>
-            <ul className="space-y-2">
-              {m.top.map((s) => (
-                <li key={s.title} className="flex items-center gap-3">
-                  <span className="w-1/3 truncate text-sm text-foreground" title={s.title}>{s.title}</span>
-                  <div className="flex-1">
-                    <div className="h-3 rounded-full" style={{ width: `${(100 * s.msgs) / m.maxMsgs}%`, background: `var(${STATUS_VAR[s.status] || '--primary'})`, minWidth: s.msgs > 0 ? '2%' : '0' }} />
-                  </div>
-                  <span className="w-16 text-right text-xs tabular-nums text-muted-foreground">{s.msgs} {t('genieportfolio.msgsShort')}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-card-foreground">{t('genieportfolio.adoption')}</h2>
+              <span className="text-xs text-muted-foreground">{t('genieportfolio.adoptionHint')}</span>
+            </div>
+            {trendData.labels.length === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">—</p>
+            ) : (
+              <SeriesChart
+                labels={trendData.labels}
+                series={[{ label: t('genieportfolio.adoptionSeries'), values: trendData.genie, colorVar: '--domain-finops' }]}
+                height={240}
+              />
+            )}
           </section>
 
           <NavLink to="/genie-optimize" className="flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:bg-muted">
