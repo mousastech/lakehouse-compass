@@ -42,17 +42,20 @@ class GenieCollector:
             sid = s.get("space_id")
             title = s.get("title") or sid
             desc = s.get("description") or ""
+            owner = s.get("created_by") or s.get("owner") or ""
             tables = 0
             try:
                 d = self.rest("GET", f"/api/2.0/genie/spaces/{sid}") or {}
                 desc = d.get("description") or desc
+                owner = d.get("created_by") or d.get("owner") or owner
                 ti = d.get("table_identifiers")
                 tables = len(ti) if isinstance(ti, list) else tables
             except Exception:
                 pass
             has_desc = bool(str(desc).strip())
             inv.append({"scan_id": self.scan_id, "workspace_id": self.workspace_id, "workspace_name": self.workspace_name,
-                        "space_id": str(sid), "title": str(title), "has_description": has_desc, "tables": int(tables or 0)})
+                        "space_id": str(sid), "title": str(title), "has_description": has_desc,
+                        "tables": int(tables or 0), "owner": str(owner or "")})
             if not has_desc:
                 missing.append(str(title))
         res.inventory["genie_inventory"] = inv

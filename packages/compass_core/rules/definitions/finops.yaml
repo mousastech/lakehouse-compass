@@ -84,6 +84,88 @@ rules:
     docs:
       - https://docs.databricks.com/machine-learning/model-serving/scale-to-zero.html
 
+  - id: FIN-101
+    domain: finops
+    title: Cluster without (or with loose) auto-termination
+    description: >
+      An all-purpose cluster that ran idle for a large share of measured minutes
+      (avg CPU below 10%) with no or a loose auto-termination keeps billing while
+      doing nothing. Idle minutes are measured from node_timeline, not inferred.
+    severity: medium
+    level: RECOMMENDED
+    requires: [compute, billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      This cluster sits idle but stays on. Enable or tighten auto-termination so
+      it stops when idle — the reclaimed dollar is measured idle time × its rate.
+    remediation: >
+      Enable auto-termination (e.g. 15 minutes) on the cluster so it shuts down
+      after a period of inactivity.
+    docs:
+      - https://docs.databricks.com/compute/clusters-manage.html
+
+  - id: FIN-102
+    domain: finops
+    title: Warehouse auto-stop too loose (classic/PRO)
+    description: >
+      A classic/PRO SQL warehouse with no or a long auto-stop stays warm through
+      long idle gaps between queries. A shorter auto-stop trades idle warm-pool
+      cost against a billed cold-start restart.
+    severity: medium
+    level: RECOMMENDED
+    requires: [query, billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      This warehouse keeps warm through long idle gaps. Lower its auto-stop to
+      reclaim warm-pool cost (estimated — rests on a modelled counterfactual).
+    remediation: >
+      Lower the SQL warehouse auto-stop (e.g. to 10 minutes).
+    docs:
+      - https://docs.databricks.com/compute/sql-warehouse/warehouse-behavior.html
+
+  - id: FIN-103
+    domain: finops
+    title: Serverless warehouse auto-stop too loose
+    description: >
+      A serverless SQL warehouse with a large warm/active ratio reclaims real
+      idle-tail cost by shortening its auto-stop toward the 5-minute floor.
+      Serverless starts in seconds, so there is no meaningful cold-start penalty.
+    severity: medium
+    level: RECOMMENDED
+    requires: [query, billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      This serverless warehouse bills a long warm idle tail. Shorten its auto-stop
+      to 5 minutes — reclaimed idle is measured from per-query gaps.
+    remediation: >
+      Set the serverless warehouse auto-stop to 5 minutes (restarts are near-instant).
+    docs:
+      - https://docs.databricks.com/compute/sql-warehouse/warehouse-behavior.html
+
+  - id: FIN-105
+    domain: finops
+    title: Recurring jobs on an all-purpose cluster
+    description: >
+      Recurring jobs running on an all-purpose cluster pay the all-purpose rate
+      for work that jobs compute runs at a lower rate. Moving them to job clusters
+      captures the price gap.
+    severity: medium
+    level: RECOMMENDED
+    requires: [lakeflow, compute, billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      Recurring jobs use an all-purpose cluster. Move them to jobs compute to pay
+      the lower jobs-compute rate on that work.
+    remediation: >
+      Convert recurring jobs to run on job clusters (jobs compute) instead of an
+      all-purpose cluster.
+    docs:
+      - https://docs.databricks.com/jobs/compute.html
+
   - id: FIN-029
     domain: finops
     title: Lakebase idle projects or non-scale-to-zero compute

@@ -180,7 +180,13 @@ def _schemas():
         ]),
         "genie_inventory": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("space_id"), S("title"),
-            S("has_description", BooleanType()), S("tables", LongType()),
+            S("has_description", BooleanType()), S("tables", LongType()), S("owner"),
+        ]),
+        "genie_space_inventory": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("space_id"), S("title"),
+            S("owner"), S("has_description", BooleanType()), S("tables", LongType()),
+            S("msgs_30d", LongType()), S("users_30d", LongType()), S("trend_pct", DoubleType()),
+            S("cost_usd_30d", DoubleType()), S("setup_score", LongType()), S("usage_status"),
         ]),
         "lakebase_inventory": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("name"), S("state"), S("capacity"),
@@ -319,6 +325,7 @@ def run_live(args) -> None:
     from compass_core.models.rule import WafPillar
     from compass_core.rules import RuleRegistry
     from compass_core.finops_recs.builder import build_recommendations
+    from compass_core.finops_recs.compute_levers import build_compute_recommendations
     from compass_core.scoring import attach_waf_pillars, overall_score
     from compass_core.waf import load_controls, assess as assess_waf
 
@@ -460,6 +467,7 @@ def run_live(args) -> None:
         reliability_summary = rel.inventory.get("reliability_summary", [])
 
         genie_inventory: list = []
+        genie_space_inventory: list = []
         lakebase_inventory: list = []
         genie_readiness: list = []
         genie_readiness_pillars: list = []
@@ -468,6 +476,32 @@ def run_live(args) -> None:
             findings += gen.findings
             capabilities += gen.capabilities
             genie_inventory = gen.inventory.get("genie_inventory", [])
+
+            # Per-space Genie governance inventory: join the space list to per-space
+            # usage from query.history (genie_space_id). Best-effort, local ws only.
+            if genie_inventory:
+                try:
+                    from compass_core.genie_gov import build_space_inventory
+                    _usage = [r.asDict(recursive=True) for r in spark.sql(f"""
+                        SELECT query_source.genie_space_id AS space_id,
+                               COUNT(*) AS msgs_30d,
+                               COUNT(DISTINCT executed_by) AS users_30d,
+                               SUM(CASE WHEN start_time >= DATEADD(DAY, -7, CURRENT_DATE()) THEN 1 ELSE 0 END) AS msgs_7d,
+                               SUM(CASE WHEN start_time >= DATEADD(DAY, -14, CURRENT_DATE())
+                                         AND start_time < DATEADD(DAY, -7, CURRENT_DATE()) THEN 1 ELSE 0 END) AS msgs_prev_7d
+                        FROM system.query.history
+                        WHERE workspace_id='{ws}'
+                          AND start_time >= DATEADD(DAY, -{args.window_days}, CURRENT_DATE())
+                          AND query_source.genie_space_id IS NOT NULL
+                        GROUP BY 1
+                    """).collect()]
+                    usage_by_space = {str(r.get("space_id")): r for r in _usage if r.get("space_id")}
+                    genie_space_inventory = build_space_inventory(
+                        scan_id=scan_id, workspace_id=ws, workspace_name=ws_name,
+                        space_rows=genie_inventory, usage_by_space=usage_by_space,
+                    )
+                except Exception as e:  # pragma: no cover - defensive
+                    print(f"[compass] genie_space_inventory unavailable: {str(e)[:200]}")
 
             lkb = LakebaseCollector(rest, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name,
                                     pg_connect=pg_connect, owner_email=owner_email).collect()
@@ -617,6 +651,8 @@ def run_live(args) -> None:
             _write(spark, fq, "reliability_summary", reliability_summary)
         if genie_inventory:
             _write(spark, fq, "genie_inventory", genie_inventory)
+        if genie_space_inventory:
+            _write(spark, fq, "genie_space_inventory", genie_space_inventory)
         if lakebase_inventory:
             _write(spark, fq, "lakebase_inventory", lakebase_inventory)
         if genie_readiness:
@@ -656,6 +692,16 @@ def run_live(args) -> None:
                 scan_id=scan_id, workspace_id=ws, workspace_name=ws_name,
                 window_days=args.window_days, cost_detail=cost_detail_rows, endpoint_usage=ep_usage,
             )
+            # Compute levers (warehouse/cluster auto-stop, interactive->job) measure
+            # from query.history / node_timeline / job timeline; defensive, best-effort.
+            try:
+                finops_rec_rows += build_compute_recommendations(
+                    spark, scan_id=scan_id, workspace_id=ws, workspace_name=ws_name,
+                    window_days=args.window_days, compute_rows=compute_inventory,
+                )
+            except Exception as e:  # pragma: no cover - defensive
+                print(f"[compass] compute-lever recommendations unavailable: {str(e)[:200]}")
+            finops_rec_rows.sort(key=lambda x: x.get("nba_score") or 0, reverse=True)
             if finops_rec_rows:
                 _write(spark, fq, "finops_recommendations", finops_rec_rows)
         except Exception as e:  # pragma: no cover - defensive

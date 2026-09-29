@@ -9,6 +9,7 @@ import {
   Gauge,
   Users,
   Sparkles,
+  Boxes,
   Database,
   Activity,
   Compass,
@@ -46,6 +47,7 @@ import { AIEstate } from './pages/AIEstate';
 import { Governance } from './pages/Governance';
 import { Genie } from './pages/Genie';
 import { GenieReadiness } from './pages/GenieReadiness';
+import { GenieSpaces } from './pages/GenieSpaces';
 import { Lakebase } from './pages/Lakebase';
 import { Performance } from './pages/Performance';
 import { Usage } from './pages/Usage';
@@ -82,15 +84,21 @@ const SECTIONS: NavSection[] = [
       { to: '/governance', tKey: 'nav.governance', icon: Landmark },
       { to: '/performance', tKey: 'nav.performance', icon: Gauge },
       { to: '/usage', tKey: 'nav.usage', icon: Users },
-      { to: '/genie', tKey: 'nav.genie', icon: Sparkles },
       { to: '/lakebase', tKey: 'nav.lakebase', icon: Database },
       { to: '/reliability', tKey: 'nav.reliability', icon: Activity },
     ],
   },
   {
+    labelKey: 'nav.section.genie',
+    items: [
+      { to: '/genie', tKey: 'nav.genie', icon: Sparkles },
+      { to: '/genie-spaces', tKey: 'nav.genie_spaces', icon: Boxes },
+      { to: '/genie-readiness', tKey: 'nav.genie_readiness', icon: Telescope },
+    ],
+  },
+  {
     labelKey: 'nav.section.govern',
     items: [
-      { to: '/genie-readiness', tKey: 'nav.genie_readiness', icon: Telescope },
       { to: '/waf', tKey: 'nav.waf', icon: Compass },
       { to: '/compliance', tKey: 'nav.compliance', icon: ClipboardCheck },
       { to: '/maintenance', tKey: 'nav.maintenance', icon: CalendarClock },
@@ -318,6 +326,7 @@ const router = createBrowserRouter([
       { path: '/performance', element: <Performance /> },
       { path: '/usage', element: <Usage /> },
       { path: '/genie', element: <Genie /> },
+      { path: '/genie-spaces', element: <GenieSpaces /> },
       { path: '/genie-readiness', element: <GenieReadiness /> },
       { path: '/lakebase', element: <Lakebase /> },
       { path: '/reliability', element: <Reliability /> },

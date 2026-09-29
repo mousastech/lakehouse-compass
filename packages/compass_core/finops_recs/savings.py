@@ -38,6 +38,7 @@ THRESHOLDS: dict[str, dict[str, float]] = {
         "max_acceptable_minutes": 10,  # serverless default is 10
         "min_autostop_minutes": 5,     # never recommend below the UI floor
         "startup_penalty_min": 1,      # serverless starts in seconds; next query still waits
+        "churny_stops_per_day": 30,    # above this many new stop/starts a day => suppress
         "min_savings_usd": 5,
     },
     "idle_serving_endpoints": {

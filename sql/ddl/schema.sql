@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.finops_recommendatio
 ) USING DELTA;
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.finops_recommendations TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 
+-- Per-space Genie governance inventory (fleet oversight): owner, usage, trend,
+-- cost, setup score and usage status. Pre-created for generate-types.
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.genie_space_inventory (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, space_id STRING, title STRING,
+  owner STRING, has_description BOOLEAN, tables BIGINT, msgs_30d BIGINT, users_30d BIGINT,
+  trend_pct DOUBLE, cost_usd_30d DOUBLE, setup_score BIGINT, usage_status STRING
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.genie_space_inventory TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
 -- Immutable per-run snapshot (append-only) — trend/diff over time.
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.scan_runs (
   scan_id STRING, workspace_id STRING, workspace_name STRING, generated_at STRING,
