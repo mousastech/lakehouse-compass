@@ -175,6 +175,8 @@ def test_untagged_spend_advisory_zero_savings_ranks_on_spend():
     assert r["rule_id"] == "FIN-027"
     assert r["savings_status"] == "advisory" and r["savings_point_usd"] == 0.0
     assert r["priority"] == "HIGH"  # >= 1000/mo
+    # Advisory books $0 but must still rank on spend at risk (not collapse to 0).
+    assert r["nba_score"] > 0
 
 
 def test_owner_identity_or_tag_makes_spend_attributable():

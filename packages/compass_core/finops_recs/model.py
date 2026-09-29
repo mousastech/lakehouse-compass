@@ -90,11 +90,15 @@ class Recommendation:
 
     @property
     def nba(self) -> float:
-        # Advisory findings book nothing but still rank on the spend at risk.
-        return nba_score(self.savings_point_usd, self.effort_band, self.priority)
+        # Advisory findings book no savings, so they rank on the spend at risk
+        # (e.g. unattributable spend) rather than collapsing to nba 0.
+        base = self.monthly_spend_usd if self.savings_status == "advisory" else self.savings_point_usd
+        return nba_score(base, self.effort_band, self.priority)
 
     def recommendation_id(self) -> str:
-        key = f"{self.rule_id}|{self.workspace_id}|{self.resource_id}|{self.scan_id}"
+        # resource_type is part of the key so two resources of different types
+        # with the same name under one rule don't collide.
+        key = f"{self.rule_id}|{self.workspace_id}|{self.resource_type}|{self.resource_id}|{self.scan_id}"
         return hashlib.sha256(key.encode()).hexdigest()[:32]
 
     def to_row(self) -> dict[str, Any]:

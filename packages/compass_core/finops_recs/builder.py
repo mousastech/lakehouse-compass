@@ -92,8 +92,8 @@ def _idle_serving_endpoints(
                 resource_id=name,
                 resource_name=name,
                 why=(
-                    f"This endpoint served 0 requests in the last {window_days} days "
-                    f"but billed ~${monthly:,.0f}/mo — it is always-on with no traffic."
+                    f"This endpoint served {requests} requests in the last 30 days "
+                    f"but billed ~${monthly:,.0f}/mo — it is always-on with little/no traffic."
                 ),
                 how="Scale to zero (min_concurrency=0) or delete the endpoint if unused.",
                 monthly_spend_usd=monthly,

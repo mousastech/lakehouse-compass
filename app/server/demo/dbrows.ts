@@ -76,9 +76,9 @@ export const costDetailRows = [
 ];
 
 export const genieSpaceInventoryRows = [
-  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', space_id: 'sp-sales', title: 'Sales Pipeline Intelligence', owner: 'ana.lima@demo', has_description: true, tables: 5, msgs_30d: 142, users_30d: 8, trend_pct: 22.0, cost_usd_30d: 6.4, setup_score: 100, usage_status: 'Active' },
-  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', space_id: 'sp-fin', title: 'FP&A Variance Analytics', owner: 'moises.santos@demo', has_description: true, tables: 3, msgs_30d: 38, users_30d: 2, trend_pct: -12.0, cost_usd_30d: 1.2, setup_score: 100, usage_status: 'Low use' },
-  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', space_id: 'sp-hr', title: 'Talent Analytics (draft)', owner: '', has_description: false, tables: 0, msgs_30d: 0, users_30d: 0, trend_pct: 0.0, cost_usd_30d: 0.0, setup_score: 0, usage_status: 'Unused' },
+  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', space_id: 'sp-sales', title: 'Sales Pipeline Intelligence', owner: 'ana.lima@demo', has_description: true, tables: 5, msgs_30d: 142, users_30d: 8, trend_pct: 22.0, free_value_usd: 5.1, billed_usd: 1.3, cost_usd_30d: 1.3, setup_score: 100, usage_status: 'Active' },
+  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', space_id: 'sp-fin', title: 'FP&A Variance Analytics', owner: 'moises.santos@demo', has_description: true, tables: 3, msgs_30d: 38, users_30d: 2, trend_pct: -12.0, free_value_usd: 1.2, billed_usd: 0.0, cost_usd_30d: 0.0, setup_score: 100, usage_status: 'Low use' },
+  { workspace_id: '7474658545709121', workspace_name: 'moi-ai', space_id: 'sp-hr', title: 'Talent Analytics (draft)', owner: '', has_description: false, tables: 0, msgs_30d: 0, users_30d: 0, trend_pct: 0.0, free_value_usd: 0.0, billed_usd: 0.0, cost_usd_30d: 0.0, setup_score: 0, usage_status: 'Unused' },
 ];
 
 export const finopsRecommendationsRows = [
