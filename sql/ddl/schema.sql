@@ -68,6 +68,19 @@ CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.cost_trend (
 ) USING DELTA;
 GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.cost_trend TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
 
+-- Dollarized, NBA-ranked FinOps recommendations (savings band + confidence tier
+-- + savings status). Pre-created so the app build's generate-types finds the
+-- table even on a workspace whose latest scan produced zero recommendations.
+CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.finops_recommendations (
+  scan_id STRING, workspace_id STRING, workspace_name STRING, recommendation_id STRING,
+  rule_id STRING, rule_title STRING, category STRING, resource_type STRING,
+  resource_id STRING, resource_name STRING, resource_owner STRING, why STRING, how STRING,
+  monthly_spend_usd DOUBLE, savings_point_usd DOUBLE, savings_low_usd DOUBLE, savings_high_usd DOUBLE,
+  savings_status STRING, confidence STRING, effort_band STRING, effort_score BIGINT,
+  priority STRING, nba_score DOUBLE, observed_days BIGINT, evidence_json STRING
+) USING DELTA;
+GRANT SELECT ON TABLE moi_ai_catalog.lakehouse_compass.finops_recommendations TO `9e5eaa76-9282-4a5a-be66-41397adf8313`;
+
 -- Immutable per-run snapshot (append-only) — trend/diff over time.
 CREATE TABLE IF NOT EXISTS moi_ai_catalog.lakehouse_compass.scan_runs (
   scan_id STRING, workspace_id STRING, workspace_name STRING, generated_at STRING,

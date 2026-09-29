@@ -9,6 +9,7 @@ import { fmtUsd, fmtDate } from '../lib/format';
 import { KpiCard } from '../components/KpiCard';
 import { Treemap, type TreemapItem } from '../components/Treemap';
 import { CostTrend } from '../components/CostTrend';
+import { RecommendationsPanel } from '../components/RecommendationsPanel';
 
 const PALETTE = [
   '--domain-performance',
@@ -181,6 +182,8 @@ export function FinOps() {
         </button>
       </div>
       <p className="text-xs text-muted-foreground">{t('finops.kpiHelp')}</p>
+
+      <RecommendationsPanel ws={ws} />
 
       <CostTrend ws={ws} />
 

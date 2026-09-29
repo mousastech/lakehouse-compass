@@ -12,6 +12,7 @@ export const RULE_CATALOG: Record<string, { title: string; severity: string; dom
   'SEC-029': { title: 'Workspace still allows PATs where OAuth is feasible', severity: 'high', domain: 'security', remediation: 'Disable PATs or cap lifetime; migrate integrations to OAuth.', docs: ['https://docs.databricks.com/dev-tools/auth/'] },
   'SEC-030': { title: 'ABAC tagging privileges granted broadly', severity: 'high', domain: 'security', remediation: 'Restrict APPLY TAG / ASSIGN to the data-governance stewardship group.', docs: ['https://docs.databricks.com/data-governance/unity-catalog/tags.html'] },
   'FIN-027': { title: 'Spend without user/team/use-case attribution', severity: 'high', domain: 'finops', remediation: 'Adopt a cost-tag policy; set run-as identities; enable Gateway budgets.', docs: ['https://docs.databricks.com/admin/account-settings/usage.html'] },
+  'FIN-104': { title: 'Idle serving endpoint (zero traffic, still billing)', severity: 'medium', domain: 'finops', remediation: 'Scale the endpoint to zero (min_concurrency=0) or delete it if unused.', docs: ['https://docs.databricks.com/machine-learning/model-serving/scale-to-zero.html'] },
   'FIN-028': { title: 'Serving endpoints without spend caps', severity: 'high', domain: 'finops', remediation: 'Configure a spend cap/budget via Unity AI Gateway; enable usage tracking.', docs: ['https://docs.databricks.com/ai-gateway/'] },
   'FIN-029': { title: 'Lakebase idle projects or non-scale-to-zero compute', severity: 'medium', domain: 'finops', remediation: 'Enable scale-to-zero; prune idle branches/snapshots.', docs: ['https://docs.databricks.com/oltp/'] },
   'FIN-030': { title: 'Genie consumption without free-allowance attribution', severity: 'medium', domain: 'finops', remediation: 'Attribute Genie usage to named users; review SP-driven Genie traffic.', docs: ['https://docs.databricks.com/genie/'] },
@@ -114,8 +115,16 @@ export async function buildRemediationPlan(ws: string): Promise<PlanItem[]> {
 export async function draftChange(findingId: string, user: string, ws: string): Promise<Record<string, unknown>> {
   const w = wsSafe(ws);
   const found = await runSql(`SELECT finding_id, rule_id, title, resource, remediation, workspace_id FROM ${CAT}.findings t WHERE t.finding_id='${esc(findingId)}' LIMIT 1`);
-  if (!found.length) return { error: 'finding not found' };
-  const f = found[0] as Record<string, string>;
+  let f: Record<string, string>;
+  if (found.length) {
+    f = found[0] as Record<string, string>;
+  } else {
+    // Fallback: the id may be a FinOps recommendation (not a diagnostic finding).
+    // Draft from its own why/how so the /changes approval flow works identically.
+    const rec = await runSql(`SELECT recommendation_id, rule_id, rule_title AS title, resource_name AS resource, how AS remediation, workspace_id FROM ${CAT}.finops_recommendations t WHERE t.recommendation_id='${esc(findingId)}' LIMIT 1`);
+    if (!rec.length) return { error: 'finding not found' };
+    f = rec[0] as Record<string, string>;
+  }
   const rule = RULE_CATALOG[f.rule_id] || { remediation: String(f.remediation || ''), title: String(f.title || '') };
   const changeId = `pc-${Date.now()}`;
   const steps = `1. Review ${f.rule_id} on ${f.resource}. 2. ${rule.remediation} 3. Re-run the Compass scan to verify resolution.`;
@@ -149,6 +158,7 @@ export const TOOL_SPECS = [
   { type: 'function', function: { name: 'get_capabilities', description: 'Get capability availability (AVAILABLE/NOT_AVAILABLE) for the selected workspace.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'get_cost_summary', description: 'Get cost by product (and unattributed share) for the selected workspace.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'get_compliance', description: 'Get dbx-security-best-practices control statuses for the selected workspace.', parameters: { type: 'object', properties: { framework: { type: 'string' } } } } },
+  { type: 'function', function: { name: 'get_finops_recommendations', description: 'List dollarized, NBA-ranked FinOps cost recommendations for the selected workspace: each has a savings band (low/point/high), a confidence tier (high/medium/low), a savings status (bookable/estimated/advisory), effort and priority. Use for "how do I cut cost" / "what should I fix to save money" and to draft a change on a recommendation_id.', parameters: { type: 'object', properties: { status: { type: 'string' } } } } },
   { type: 'function', function: { name: 'run_named_query', description: 'Run a whitelisted named query (scores, findings, cost_summary, compliance, capabilities, trend, reports) for the selected workspace.', parameters: { type: 'object', properties: { query_id: { type: 'string' } }, required: ['query_id'] } } },
   { type: 'function', function: { name: 'propose_remediation_plan', description: 'Return a prioritized remediation plan for the selected workspace: open findings ranked by severity and how weak the Well-Architected pillar they touch is. Use this to triage what to fix first.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'draft_proposed_change', description: 'Draft a ProposedChange (steps, code, rollback, blast radius) for a finding and persist it for human approval. Never executes.', parameters: { type: 'object', properties: { finding_id: { type: 'string' } }, required: ['finding_id'] } } },
@@ -182,6 +192,12 @@ export async function executeTool(name: string, args: Record<string, unknown>, w
       return runSql(`SELECT t.product, ROUND(SUM(t.cost_usd),2) AS cost_usd, MAX(CASE WHEN t.identity='(unattributed)' THEN 1 ELSE 0 END) AS has_unattributed FROM ${CAT}.cost_summary t WHERE t.scan_id=${latest('cost_summary', ws)} ${w ? `AND t.workspace_id='${w}'` : ''} GROUP BY t.product ORDER BY cost_usd DESC`);
     case 'get_compliance':
       return runSql(`SELECT t.control_id, t.title, t.category, t.status FROM ${CAT}.compliance_results t WHERE t.scan_id=${latest('compliance_results', ws)} ${w ? `AND t.workspace_id='${w}'` : ''}`);
+    case 'get_finops_recommendations': {
+      const conds = [`t.scan_id=${latest('finops_recommendations', ws)}`];
+      if (w) conds.push(`t.workspace_id='${w}'`);
+      if (typeof args.status === 'string') conds.push(`t.savings_status='${esc(args.status)}'`);
+      return runSql(`SELECT t.recommendation_id, t.rule_id, t.rule_title, t.category, t.resource_type, t.resource_name, t.why, t.how, t.monthly_spend_usd, t.savings_point_usd, t.savings_low_usd, t.savings_high_usd, t.savings_status, t.confidence, t.effort_band, t.priority, t.nba_score FROM ${CAT}.finops_recommendations t WHERE ${conds.join(' AND ')} ORDER BY t.nba_score DESC LIMIT 50`);
+    }
     case 'get_maintenance':
       return [{ note: 'Maintenance tasks are not yet materialized to Delta in this phase.' }];
     case 'run_named_query': {

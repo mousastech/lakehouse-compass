@@ -5,6 +5,7 @@ import {
   findingsRows,
   costSummaryRows,
   costDetailRows,
+  finopsRecommendationsRows,
   complianceRows,
   maintenanceRows,
   workspacesRows,
@@ -63,6 +64,9 @@ export function setupApiRoutes(appkit: AppKitServer): void {
     app.get('/api/rows/findings', (_req, res) => res.json(findingsRows));
     app.get('/api/rows/cost_summary', (_req, res) => res.json(costSummaryRows));
     app.get('/api/rows/cost_detail', (_req, res) => res.json(costDetailRows));
+    // Recommendations fixture serves only in demo mode; a client deploy with an
+    // empty live table shows NOT_AVAILABLE, never demo rows (cross-env safety).
+    app.get('/api/rows/finops_recommendations', (_req, res) => res.json(DEMO_MODE ? finopsRecommendationsRows : []));
     app.get('/api/rows/cost_trend', (_req, res) => res.json(costTrendRows));
     app.get('/api/rows/compliance', (_req, res) => res.json(complianceRows));
     app.get('/api/rows/maintenance', (_req, res) => res.json(maintenanceRows));

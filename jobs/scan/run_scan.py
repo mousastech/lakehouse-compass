@@ -116,6 +116,16 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("usage_date"),
             S("product"), S("cost_usd", DoubleType()), S("dbus", DoubleType()),
         ]),
+        "finops_recommendations": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("recommendation_id"),
+            S("rule_id"), S("rule_title"), S("category"), S("resource_type"),
+            S("resource_id"), S("resource_name"), S("resource_owner"), S("why"), S("how"),
+            S("monthly_spend_usd", DoubleType()), S("savings_point_usd", DoubleType()),
+            S("savings_low_usd", DoubleType()), S("savings_high_usd", DoubleType()),
+            S("savings_status"), S("confidence"), S("effort_band"), S("effort_score", LongType()),
+            S("priority"), S("nba_score", DoubleType()), S("observed_days", LongType()),
+            S("evidence_json"),
+        ]),
         "scan_runs": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("generated_at"),
             S("overall_score", DoubleType()), S("coverage_pct", DoubleType()),
@@ -308,6 +318,7 @@ def run_live(args) -> None:
     from compass_core.models.finding import Severity, Status
     from compass_core.models.rule import WafPillar
     from compass_core.rules import RuleRegistry
+    from compass_core.finops_recs.builder import build_recommendations
     from compass_core.scoring import attach_waf_pillars, overall_score
     from compass_core.waf import load_controls, assess as assess_waf
 
@@ -636,6 +647,19 @@ def run_live(args) -> None:
                      "cost_usd": float(r.get("cost_usd") or 0.0), "dbus": float(r.get("dbus") or 0.0),
                      "records": int(r.get("records") or 0)}
                     for r in cost_detail_rows])
+
+        # FinOps recommendations — dollarized, NBA-ranked actions built from the
+        # inventory collected this scan (idle serving endpoints, untagged spend).
+        # Best-effort: a build error must never fail the scan.
+        try:
+            finops_rec_rows = build_recommendations(
+                scan_id=scan_id, workspace_id=ws, workspace_name=ws_name,
+                window_days=args.window_days, cost_detail=cost_detail_rows, endpoint_usage=ep_usage,
+            )
+            if finops_rec_rows:
+                _write(spark, fq, "finops_recommendations", finops_rec_rows)
+        except Exception as e:  # pragma: no cover - defensive
+            print(f"[compass] finops_recommendations unavailable: {str(e)[:200]}")
 
         if cost_trend_rows:
             _write(spark, fq, "cost_trend",

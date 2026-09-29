@@ -63,6 +63,27 @@ rules:
     docs:
       - https://docs.databricks.com/genie/
 
+  - id: FIN-104
+    domain: finops
+    title: Idle serving endpoint (zero traffic, still billing)
+    description: >
+      A model serving / Unity AI Gateway endpoint that served zero requests over
+      the window but keeps billing always-on compute. system.serving.endpoint_usage
+      is a per-request log, so "nobody calls this" is counted, not inferred.
+    severity: medium
+    level: RECOMMENDED
+    requires: [serving, billing]
+    frameworks: []
+    waf_pillars: [cost_optimization]
+    agent_explainer: >
+      This endpoint has no traffic but bills continuously. Scale it to zero or
+      delete it — the reclaimed dollar is its own measured billed cost.
+    remediation: >
+      Scale the endpoint to zero (min_concurrency=0, scale-to-zero is GA) or
+      delete it if it is no longer needed.
+    docs:
+      - https://docs.databricks.com/machine-learning/model-serving/scale-to-zero.html
+
   - id: FIN-029
     domain: finops
     title: Lakebase idle projects or non-scale-to-zero compute
