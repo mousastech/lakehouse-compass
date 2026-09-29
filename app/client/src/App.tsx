@@ -10,6 +10,8 @@ import {
   Users,
   Sparkles,
   Boxes,
+  LayoutGrid,
+  Wand2,
   Database,
   Activity,
   Compass,
@@ -48,6 +50,8 @@ import { Governance } from './pages/Governance';
 import { Genie } from './pages/Genie';
 import { GenieReadiness } from './pages/GenieReadiness';
 import { GenieSpaces } from './pages/GenieSpaces';
+import { GeniePortfolio } from './pages/GeniePortfolio';
+import { GenieOptimize } from './pages/GenieOptimize';
 import { Lakebase } from './pages/Lakebase';
 import { Performance } from './pages/Performance';
 import { Usage } from './pages/Usage';
@@ -91,8 +95,10 @@ const SECTIONS: NavSection[] = [
   {
     labelKey: 'nav.section.genie',
     items: [
+      { to: '/genie-portfolio', tKey: 'nav.genie_portfolio', icon: LayoutGrid },
       { to: '/genie', tKey: 'nav.genie', icon: Sparkles },
       { to: '/genie-spaces', tKey: 'nav.genie_spaces', icon: Boxes },
+      { to: '/genie-optimize', tKey: 'nav.genie_optimize', icon: Wand2 },
       { to: '/genie-readiness', tKey: 'nav.genie_readiness', icon: Telescope },
     ],
   },
@@ -325,8 +331,10 @@ const router = createBrowserRouter([
       { path: '/governance', element: <Governance /> },
       { path: '/performance', element: <Performance /> },
       { path: '/usage', element: <Usage /> },
+      { path: '/genie-portfolio', element: <GeniePortfolio /> },
       { path: '/genie', element: <Genie /> },
       { path: '/genie-spaces', element: <GenieSpaces /> },
+      { path: '/genie-optimize', element: <GenieOptimize /> },
       { path: '/genie-readiness', element: <GenieReadiness /> },
       { path: '/lakebase', element: <Lakebase /> },
       { path: '/reliability', element: <Reliability /> },
