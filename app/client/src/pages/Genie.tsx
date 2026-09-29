@@ -8,6 +8,7 @@ import { NotAvailable, SourceBadge } from '../components/SourceBadge';
 import { FindingsList } from '../components/FindingsList';
 import { GenieCostTrend } from '../components/GenieCostTrend';
 import { BarChart, type Bar } from '../components/BarChart';
+import { StackedBar } from '../components/StackedBar';
 
 interface GenieSpace {
   space_id: string;
@@ -99,6 +100,13 @@ function CostConsumption() {
     label: toStr(x.surface), value: toNum(x.dbus), color: '--domain-genie',
   }));
 
+  // Free-vs-billable framing: price the free DBUs at the measured effective rate
+  // to show the "value" of free usage next to what is actually billable today.
+  const effRate = billedDbus > 0 ? billedCost / billedDbus : 0;
+  const freeValue = freeDbus * effRate;
+  const totalValue = freeValue + billedCost;
+  const pctFree = totalValue > 0 ? Math.round((100 * freeValue) / totalValue) : 0;
+
   const kpis = [
     { icon: DollarSign, label: t('genie.cost.billedCost'), value: usd(billedCost), color: 'var(--domain-finops)' },
     { icon: Gauge, label: t('genie.cost.billedDbus'), value: dbu(billedDbus), color: 'var(--domain-genie)' },
@@ -128,6 +136,25 @@ function CostConsumption() {
           </div>
         ))}
       </div>
+
+      {/* Today's cost split — free user usage vs what is actually billable. */}
+      {totalValue > 0 && (
+        <div className="compass-enter rounded-xl border border-border bg-card p-4">
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-card-foreground">{t('genie.cost.splitTitle')}</h3>
+            <span className="text-[11px] text-muted-foreground">{t('genie.cost.splitHint')}</span>
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            {t('genie.cost.splitCallout').replace('{pct}', String(pctFree)).replace('{billed}', usd(billedCost))}
+          </p>
+          <StackedBar
+            segments={[
+              { label: t('genie.cost.splitFree'), value: freeValue, colorVar: '--domain-finops' },
+              { label: t('genie.cost.splitBilled'), value: billedCost, colorVar: '--domain-usage' },
+            ]}
+          />
+        </div>
+      )}
 
       {/* Genie Code focus — the surface that actually bills. */}
       <div className="compass-enter rounded-xl border bg-card p-4" style={{ borderColor: 'var(--domain-genie)' }}>
