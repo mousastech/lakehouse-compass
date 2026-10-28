@@ -15,17 +15,24 @@ on the local workspace, the account's governed-tag policies (Tag Policy API):
   * **Tag inventory** (`tag_inventory`) — every key in use, its mapped role (or a
     suggested one), whether it is governed, and its top values.
 
+  * **Tag hygiene** — key variants that collide (`Camada`/`camada`), roles
+    spread over several keys, value case variants, and governed keys used with
+    values outside their tag policy's allowed list.
+
 Findings: GOV-016 (governed tags never applied), GOV-030 (gold without owner),
-GOV-031 (gold not certified), GOV-033 (domain without an owner), GOV-040
-(generic descriptions on the assets that matter). Read-only; never reads data
-rows, only metadata.
+GOV-031 (gold not certified), GOV-033 (domain without an owner), GOV-034 (tag
+drift), GOV-035 (values outside the allowed list), GOV-040 (generic
+descriptions on the assets that matter). Read-only; never reads data rows, only
+metadata.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from typing import Any, Callable, Optional
+from urllib.parse import quote
 
 from ..models.capability import Availability
 from ..models.finding import Finding, Severity
@@ -40,6 +47,8 @@ QUALITY_CLASSES = ("useful", "missing", "placeholder", "echo", "generic", "short
 SHORT_MAX_LEN = 10          # comments shorter than this cannot explain anything
 BOILERPLATE_MIN_NAMES = 3   # identical text reused on ≥ N different names
 _SAMPLE = 10
+_MAX_POLICY_LOOKUPS = 200   # allowed-values lookups (one GET per governed key in use)
+_MAX_TAG_VALUES = 20000     # distinct (key, value) pairs read for hygiene checks
 
 # Full-match patterns (lower-cased, trimmed). Bracket classes instead of
 # backslash escapes so they survive Spark SQL string-literal unescaping.
@@ -216,8 +225,16 @@ class MetadataCollector:
         """
         return rows_as_dicts(spark, sql)
 
+    def _tag_values(self, spark: SparkLike) -> list[dict[str, Any]]:
+        """Distinct (key, value) assignments with counts — input for the hygiene checks."""
+        parts = [f"SELECT tag_name AS k, tag_value AS v FROM {_system_src(view)} WHERE 1=1{internal_filter('catalog_name')}"
+                 for view in ("catalog_tags", "schema_tags", "table_tags", "column_tags", "volume_tags")]
+        return rows_as_dicts(
+            spark, f"SELECT k, v, COUNT(*) AS n FROM ({' UNION ALL '.join(parts)}) GROUP BY k, v "
+                   f"ORDER BY n DESC LIMIT {_MAX_TAG_VALUES}")
+
     def _governed_keys(self) -> Optional[set[str]]:
-        """Governed tag keys of the account (Tag Policy API). None = not readable."""
+        """Governed tag keys of the account, as written (Tag Policy API). None = not readable."""
         if self.rest is None:
             return None
         keys: set[str] = set()
@@ -227,11 +244,25 @@ class MetadataCollector:
             resp = self.rest("GET", path) or {}
             for p in resp.get("tag_policies") or []:
                 if p.get("tag_key"):
-                    keys.add(str(p["tag_key"]).lower())
+                    keys.add(str(p["tag_key"]))
             token = resp.get("next_page_token") or ""
             if not token:
                 break
         return keys
+
+    def _allowed_values(self, keys: list[str]) -> dict[str, list[str]]:
+        """Allowed values per governed key (the list API omits them). An empty list
+        means the policy accepts any value. Keys that fail to resolve are skipped."""
+        out: dict[str, list[str]] = {}
+        if self.rest is None:
+            return out
+        for k in keys[:_MAX_POLICY_LOOKUPS]:
+            try:
+                resp = self.rest("GET", f"/api/2.1/tag-policies/{quote(k, safe='')}") or {}
+            except Exception:
+                continue
+            out[k] = [str(v.get("name")) for v in (resp.get("values") or []) if v.get("name") is not None]
+        return out
 
     # -- orchestration ------------------------------------------------------------
     def collect(self, spark: SparkLike) -> CollectorResult:
@@ -265,10 +296,21 @@ class MetadataCollector:
             res.capabilities.append(cap("tag_policies", "tag_policies_api", Availability.NOT_AVAILABLE,
                                         "Tag Policy API is read from the local workspace only."))
 
-        res.inventory["governance_metrics"] = self._quality_metrics(facts, examples)
+        try:
+            kv = self._tag_values(spark)
+        except Exception as e:
+            print(f"[compass] tag values failed: {str(e)[:160]}")
+            kv = []
+        used_keys = sorted({str(u.get("tag_key") or "") for u in usage} - {""})
+        allowed = self._allowed_values([k for k in used_keys if k in governed]) if governed else {}
+
+        hygiene = tag_hygiene(self.profile, kv, governed, allowed)
+        res.inventory["governance_metrics"] = self._quality_metrics(facts, examples) + [
+            {"scan_id": self.scan_id, "workspace_id": self.workspace_id, **r} for r in hygiene["metrics"]]
         res.inventory["tag_rollup"] = self._rollup(facts)
-        res.inventory["tag_inventory"] = self._inventory(usage, governed)
+        res.inventory["tag_inventory"] = self._inventory(usage, governed, allowed, hygiene["invalid_by_key"])
         res.findings += self._findings(facts, usage, governed)
+        res.findings += self._hygiene_findings(hygiene)
         return res
 
     # -- shaping ----------------------------------------------------------------
@@ -321,7 +363,11 @@ class MetadataCollector:
         return [self._row(role=role, value=val, **{k: int(v) for k, v in a.items()})
                 for (role, val), a in sorted(acc.items(), key=lambda kv: (kv[0][0], -kv[1]["tables"]))]
 
-    def _inventory(self, usage: list[dict], governed: Optional[set[str]]) -> list[dict]:
+    def _inventory(self, usage: list[dict], governed: Optional[set[str]],
+                   allowed: dict[str, list[str]] | None = None,
+                   invalid_by_key: dict[str, int] | None = None) -> list[dict]:
+        allowed = allowed or {}
+        invalid_by_key = invalid_by_key or {}
         rows = []
         for u in usage:
             key = str(u.get("tag_key") or "")
@@ -333,7 +379,9 @@ class MetadataCollector:
             rows.append(self._row(
                 tag_key=key, role=self.profile.role_of(key) or "",
                 suggested_role=self.profile.suggest_role(key, values) or "",
-                governed=(key.lower() in governed) if governed is not None else None,
+                governed=(key in governed) if governed is not None else None,
+                allowed_values_json=json.dumps(allowed[key]) if key in allowed else None,
+                invalid_assignments=int(invalid_by_key.get(key, 0)),
                 securable_types=u.get("securable_types") or "",
                 assignments=int(u.get("assignments") or 0), distinct_values=int(u.get("distinct_values") or 0),
                 top_values_json=json.dumps(top, default=str)))
@@ -356,8 +404,8 @@ class MetadataCollector:
 
         # GOV-016 — customer governed tags (not Databricks system tags) never applied.
         if governed is not None:
-            custom = {k for k in governed if not k.startswith(_SYSTEM_TAG_PREFIXES)}
-            used = {str(u.get("tag_key") or "").lower() for u in usage}
+            custom = {k for k in governed if not k.lower().startswith(_SYSTEM_TAG_PREFIXES)}
+            used = {str(u.get("tag_key") or "") for u in usage}
             unused = sorted(custom - used)
             if custom and unused:
                 share = round(100.0 * len(unused) / len(custom), 1)
@@ -429,3 +477,113 @@ class MetadataCollector:
                     "and business rule.",
                     ["DBX-SBP:GOV-2"]))
         return out
+
+    def _hygiene_findings(self, h: dict[str, Any]) -> list[Finding]:
+        out: list[Finding] = []
+        drift = h["drift"]
+        n_drift = len(drift["key_variants"]) + len(drift["roles_multi_key"]) + len(drift["value_variants"])
+        if n_drift:
+            out.append(self._finding(
+                "GOV-034", "Tag drift: the same concept is tagged several ways", Severity.LOW,
+                f"{n_drift} drift group(s)",
+                {**drift, "note": "Key variants differ only by case or separators; a role spread over several keys "
+                                  "is usually one concept that should be one governed key."},
+                "Pick one governed key per concept (and one spelling per value), migrate the variants, and map "
+                "the survivor in the Tag Profile.",
+                ["DBX-SBP:GOV-1"]))
+        inv = h["invalid"]
+        if inv:
+            total = sum(i["assignments"] for i in inv)
+            out.append(self._finding(
+                "GOV-035", "Governed tags used with values outside their allowed list", Severity.MEDIUM,
+                f"{total} assignment(s) on {len(inv)} governed key(s)",
+                {"keys": inv[:_SAMPLE], "assignments": total,
+                 "note": "Usually assignments made before the tag policy existed; they now carry a governed key "
+                         "with a value the policy rejects, so ABAC conditions on that value miss them."},
+                "Re-tag these objects with an allowed value, or add the value to the tag policy if it is legitimate.",
+                ["DBX-SBP:GOV-1"]))
+        return out
+
+
+def _norm_key(k: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(k).lower())
+
+
+def tag_hygiene(profile: TagProfile, kv: list[dict[str, Any]], governed: Optional[set[str]],
+                allowed: dict[str, list[str]]) -> dict[str, Any]:
+    """Pure hygiene checks over distinct (key, value, n) assignments.
+
+    * key_variants — keys in use that only differ by case/separators, or an
+      ungoverned key that is a variant of a governed one;
+    * roles_multi_key — a Tag Profile role carried by more than one key in use;
+    * value_variants — values of one role that only differ by case;
+    * invalid — governed keys whose assignments use values outside the policy's
+      allowed list (keys whose policy has no values accept anything).
+    Databricks system tags (class.*, system.*, ai.*, sap.*) are left out.
+    """
+    rows = [r for r in kv if r.get("k") and not str(r["k"]).lower().startswith(_SYSTEM_TAG_PREFIXES)]
+    used = sorted({str(r["k"]) for r in rows})
+
+    groups: dict[str, set[str]] = defaultdict(set)
+    for k in used:
+        groups[_norm_key(k)].add(k)
+    # An UNGOVERNED key in use that is a variant of a governed key is drift too: policies
+    # (and ABAC conditions) written against the governed spelling miss those objects.
+    # Two governed spellings with only one in use is account noise, not drift here.
+    gov_by_norm: dict[str, set[str]] = defaultdict(set)
+    for g in governed or set():
+        if not g.lower().startswith(_SYSTEM_TAG_PREFIXES):
+            gov_by_norm[_norm_key(g)].add(g)
+    key_variants = []
+    for norm, ks in groups.items():
+        ungoverned_used = {k for k in ks if not (governed and k in governed)}
+        variants = set(ks)
+        if ungoverned_used:
+            variants |= gov_by_norm.get(norm, set())
+        if len(variants) > 1:
+            key_variants.append({"keys": sorted(variants), "in_use": sorted(ks),
+                                 "governed": sorted(k for k in variants if governed and k in governed)})
+
+    role_keys: dict[str, set[str]] = defaultdict(set)
+    role_vals: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    for r in rows:
+        role = profile.role_of(r["k"])
+        if not role:
+            continue
+        role_keys[role].add(str(r["k"]))
+        if r.get("v") not in (None, ""):
+            role_vals[role][str(r["v"]).strip().lower()].add(str(r["v"]))
+    roles_multi_key = [{"role": role, "keys": sorted(ks)} for role, ks in sorted(role_keys.items()) if len(ks) > 1]
+    value_variants = [{"role": role, "values": sorted(vs)}
+                      for role, by in sorted(role_vals.items()) for vs in by.values() if len(vs) > 1]
+
+    invalid: list[dict[str, Any]] = []
+    invalid_by_key: dict[str, int] = {}
+    for key, vals in allowed.items():
+        if not vals:
+            continue
+        ok = set(vals)
+        bad = [r for r in rows if r["k"] == key and str(r.get("v") or "") not in ok]
+        if bad:
+            n = sum(int(r.get("n") or 0) for r in bad)
+            invalid_by_key[key] = n
+            invalid.append({"key": key, "assignments": n, "values": sorted({str(r.get("v") or "") for r in bad})[:8],
+                            "allowed": vals[:12]})
+    invalid.sort(key=lambda i: -i["assignments"])
+
+    total = sum(int(r.get("n") or 0) for r in rows)
+    gov_n = sum(int(r.get("n") or 0) for r in rows if governed and r["k"] in governed)
+    metrics = [
+        {"metric": "tag_assignments_total", "value": float(total), "detail": "excluding Databricks system tags"},
+        {"metric": "tag_assignments_governed_pct",
+         "value": round(100.0 * gov_n / total, 1) if (total and governed is not None) else 0.0,
+         "detail": "" if governed is not None else "tag policies not readable"},
+        {"metric": "tag_drift", "value": float(len(key_variants) + len(roles_multi_key) + len(value_variants)),
+         "detail": json.dumps({"key_variants": key_variants, "roles_multi_key": roles_multi_key,
+                               "value_variants": value_variants})},
+        {"metric": "tag_invalid_values", "value": float(sum(invalid_by_key.values())),
+         "detail": json.dumps(invalid[:_SAMPLE])},
+    ]
+    return {"drift": {"key_variants": key_variants, "roles_multi_key": roles_multi_key,
+                      "value_variants": value_variants},
+            "invalid": invalid, "invalid_by_key": invalid_by_key, "metrics": metrics}

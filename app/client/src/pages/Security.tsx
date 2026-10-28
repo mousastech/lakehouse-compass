@@ -8,6 +8,7 @@ import { scoreColorVar, SEVERITY_VAR } from '../lib/domains';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { FindingDrawer } from '../components/FindingDrawer';
 import { TeachButton } from '../components/TeachButton';
+import { SensitiveDataPanel } from '../components/SensitiveDataPanel';
 import type { Severity } from '../lib/api';
 
 const SEVS: Severity[] = ['critical', 'high', 'medium', 'low', 'info'];
@@ -95,6 +96,8 @@ export function Security() {
           </div>
         </div>
       </div>
+
+      <SensitiveDataPanel ws={ws} />
 
       <section className="rounded-xl border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold text-card-foreground">{t('security.openFindings')}</h2>

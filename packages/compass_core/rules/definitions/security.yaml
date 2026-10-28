@@ -83,3 +83,67 @@ rules:
       to the data-governance stewardship group.
     docs:
       - https://docs.databricks.com/data-governance/unity-catalog/tags.html
+
+  - id: SEC-040
+    domain: security
+    title: Sensitive columns without a visible mask
+    description: >
+      Columns tagged with a sensitivity-role tag (class.*, pii, phi… via the
+      Tag Profile) or detected with HIGH confidence by Data Classification that
+      have neither a direct column mask nor a matching ABAC column-mask policy
+      on the table or an ancestor. ABAC policies are only visible where the
+      scan identity has MANAGE.
+    severity: high
+    level: REQUIRED
+    requires: [tags, abac_policies]
+    frameworks: ["DBX-SBP:DATA-1", "LGPD:Art.46", "GDPR:Art.32"]
+    waf_pillars: [security, data_ai_governance]
+    agent_explainer: >
+      These columns are known to be sensitive but anyone with SELECT reads them
+      in clear. One ABAC column-mask policy on the sensitivity tag, attached at
+      catalog or schema level, protects all of them at once.
+    remediation: >
+      Create an ABAC COLUMN_MASK policy matching the sensitivity tag at catalog
+      or schema level, or attach a column mask to each column.
+    docs:
+      - https://docs.databricks.com/aws/en/data-governance/unity-catalog/abac/
+
+  - id: SEC-041
+    domain: security
+    title: Detected sensitive columns not tagged
+    description: >
+      HIGH-confidence Data Classification detections with no tag on the
+      column, so tag-based ABAC policies do not cover them. Requires SELECT on
+      system.data_classification.results (never reads the samples column).
+    severity: medium
+    level: RECOMMENDED
+    requires: [data_classification]
+    frameworks: ["DBX-SBP:DATA-1"]
+    waf_pillars: [security, data_ai_governance]
+    agent_explainer: >
+      Classification found sensitive data but nothing tagged it, so policies
+      built on tags skip it. Turn on automatic tagging after reviewing results.
+    remediation: >
+      Review detections and enable automatic tagging on the catalog.
+    docs:
+      - https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification
+
+  - id: SEC-042
+    domain: security
+    title: Columns that look sensitive by name are not classified
+    description: >
+      Heuristic: column names such as email, cpf, phone, address, salary or
+      customer_name with no sensitivity tag, no detection and no mask. A prompt
+      to confirm with Data Classification, not proof of sensitive content.
+    severity: low
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:DATA-1"]
+    waf_pillars: [security]
+    agent_explainer: >
+      These names usually hold personal data. Confirm with Data Classification
+      and tag what is real so masks and ABAC policies can apply.
+    remediation: >
+      Enable Data Classification on these catalogs or tag the confirmed columns.
+    docs:
+      - https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification

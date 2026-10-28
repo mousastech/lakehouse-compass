@@ -31,6 +31,8 @@ PROBES: dict[str, dict[str, str]] = {
     "lakebase": {"kind": "pg_introspection", "source": "pg_roles/pg_stat", "scope": "project"},
     "mcp_catalog": {"kind": "api", "source": "mcp_catalog", "scope": "account"},
     "tag_policies": {"kind": "api", "source": "tag_policies_api", "scope": "account"},
+    "abac_policies": {"kind": "information_schema", "source": "information_schema.abac_policy_definitions", "scope": "metastore"},
+    "data_classification_config": {"kind": "api", "source": "data_classification_api", "scope": "workspace"},
     "data_classification": {"kind": "system_table", "source": "system.data_classification.results", "scope": "account"},
     "sat": {"kind": "delta", "source": "security_analysis.results", "scope": "account"},
 }
@@ -50,6 +52,8 @@ _DEMO_AVAILABILITY: dict[str, Availability] = {
     "lakebase": Availability.DEGRADED,  # needs read-only role granted
     "mcp_catalog": Availability.NOT_AVAILABLE,  # preview / not enabled
     "tag_policies": Availability.AVAILABLE,
+    "abac_policies": Availability.AVAILABLE,
+    "data_classification_config": Availability.AVAILABLE,
     "data_classification": Availability.NOT_AVAILABLE,  # account-admin grant by default
     "sat": Availability.NOT_AVAILABLE,  # customer must run SAT
 }

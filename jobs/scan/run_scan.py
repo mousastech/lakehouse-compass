@@ -199,6 +199,16 @@ def _schemas():
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("tag_key"), S("role"), S("suggested_role"),
             S("governed", BooleanType()), S("securable_types"), S("assignments", LongType()),
             S("distinct_values", LongType()), S("top_values_json"),
+            S("allowed_values_json"), S("invalid_assignments", LongType()),
+        ]),
+        "sensitive_columns": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("catalog"), S("schema"), S("table"),
+            S("column"), S("source"), S("tag_key"), S("tag_value"), S("tagged", BooleanType()),
+            S("protection"), S("protected_by"),
+        ]),
+        "classification_coverage": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("catalog"), S("enabled", BooleanType()),
+            S("detail"),
         ]),
         "genie_cost_summary": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("window_days", LongType()),
@@ -313,7 +323,7 @@ def run_live(args) -> None:
         FinOpsCollector, SecurityCollector, AiEstateCollector, GovernanceCollector,
         PerformanceCollector, UsageCollector, ReliabilityCollector,
         GenieCollector, GenieCostCollector, LakebaseCollector, GenieReadinessCollector,
-        MetadataCollector,
+        MetadataCollector, ProtectionCollector,
     )
     from compass_core.collectors.base import cap
     from compass_core.tag_profile import load_tag_profile
@@ -470,6 +480,8 @@ def run_live(args) -> None:
         genie_readiness_pillars: list = []
         tag_rollup: list = []
         tag_inventory: list = []
+        sensitive_columns: list = []
+        classification_coverage: list = []
         if is_local:
             # Tag-based monitoring + description quality — metastore-wide UC metadata, so
             # (like the readiness UC pillars) it runs once, for the local workspace.
@@ -481,6 +493,15 @@ def run_live(args) -> None:
             tag_rollup = md.inventory.get("tag_rollup", [])
             tag_inventory = md.inventory.get("tag_inventory", [])
             md_quality = {r["metric"]: r["value"] for r in md.inventory.get("governance_metrics", [])}
+
+            # Sensitive data × protection (masks, ABAC, Data Classification) — also metastore-wide.
+            prot = ProtectionCollector(tag_profile, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name,
+                                       rest=rest).collect(spark)
+            findings += prot.findings
+            capabilities += prot.capabilities
+            gov_metrics = gov_metrics + prot.inventory.get("governance_metrics", [])
+            sensitive_columns = prot.inventory.get("sensitive_columns", [])
+            classification_coverage = prot.inventory.get("classification_coverage", [])
 
             gen = GenieCollector(rest, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect()
             findings += gen.findings
@@ -646,6 +667,10 @@ def run_live(args) -> None:
             _write(spark, fq, "tag_rollup", tag_rollup)
         if tag_inventory:
             _write(spark, fq, "tag_inventory", tag_inventory)
+        if sensitive_columns:
+            _write(spark, fq, "sensitive_columns", sensitive_columns)
+        if classification_coverage:
+            _write(spark, fq, "classification_coverage", classification_coverage)
         if genie_cost_summary:
             _write(spark, fq, "genie_cost_summary", genie_cost_summary)
         if genie_cost_by_user:

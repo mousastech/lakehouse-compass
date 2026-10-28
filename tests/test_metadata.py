@@ -7,8 +7,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "packages"))
 
 from compass_core.collectors.metadata import (  # noqa: E402
-    MetadataCollector, QUALITY_CLASSES, effective_roles_sql, quality_case_sql,
+    MetadataCollector, QUALITY_CLASSES, effective_roles_sql, quality_case_sql, tag_hygiene,
 )
+from compass_core.collectors.protection import ProtectionCollector, evaluate_protection  # noqa: E402
 from compass_core.rules import RuleRegistry  # noqa: E402
 from compass_core.tag_profile import load_tag_profile  # noqa: E402
 from compass_core.waf import load_controls  # noqa: E402
@@ -31,10 +32,10 @@ class _DF:
 
 
 class _Spark:
-    """Routes the collector's three queries to canned rows."""
+    """Routes the collector's queries to canned rows."""
 
-    def __init__(self, facts, examples=(), usage=()):
-        self.facts, self.examples, self.usage = list(facts), list(examples), list(usage)
+    def __init__(self, facts, examples=(), usage=(), kv=()):
+        self.facts, self.examples, self.usage, self.kv = list(facts), list(examples), list(usage), list(kv)
         self.queries = []
 
     def sql(self, q):
@@ -43,6 +44,8 @@ class _Spark:
             return _DF(self.facts)
         if "AS names" in q:
             return _DF(self.examples)
+        if "ORDER BY n DESC LIMIT" in q:
+            return _DF(self.kv)
         return _DF(self.usage)
 
 
@@ -124,22 +127,30 @@ def test_gold_rules_fire_and_scope_to_gold():
     assert {c.id: c.availability.value for c in res.capabilities}["tag_policies"] == "NOT_AVAILABLE"
 
 
-def test_gov016_ignores_system_tags_and_used_keys():
-    pages = [{"tag_policies": [{"tag_key": "class.email_address"}, {"tag_key": "camada"}],
-              "next_page_token": "p2"},
-             {"tag_policies": [{"tag_key": "cost_center"}, {"tag_key": "system.certification_status"}]}]
+def _policy_rest(pages, policies=None):
+    """Fake REST: paginated list for /tag-policies?..., single policy for /tag-policies/<key>."""
     calls = []
 
     def rest(method, path, body=None):
         calls.append(path)
-        return pages[len(calls) - 1]
+        if "?" in path:
+            return pages[sum(1 for c in calls if "?" in c) - 1]
+        key = path.rsplit("/", 1)[-1]
+        return (policies or {}).get(key, {})
+    return rest, calls
 
-    usage = [{"tag_key": "Camada", "assignments": 6, "distinct_values": 1, "securable_types": "schema",
+
+def test_gov016_ignores_system_tags_and_used_keys():
+    pages = [{"tag_policies": [{"tag_key": "class.email_address"}, {"tag_key": "camada"}],
+              "next_page_token": "p2"},
+             {"tag_policies": [{"tag_key": "cost_center"}, {"tag_key": "system.certification_status"}]}]
+    rest, calls = _policy_rest(pages)
+    usage = [{"tag_key": "camada", "assignments": 6, "distinct_values": 1, "securable_types": "schema",
               "top_values_json": json.dumps([{"v": "gold", "n": 6}])}]
     res = MetadataCollector(load_tag_profile(), "ws1", "s1", rest=rest).collect(_Spark([_fact("t")], usage=usage))
     gov016 = next(f for f in res.findings if f.rule_id == "GOV-016")
     assert gov016.evidence["governed_custom_keys"] == 2 and gov016.evidence["sample_unused"] == ["cost_center"]
-    assert "page_token=p2" in calls[1]
+    assert any("page_token=p2" in c for c in calls)
     inv = res.inventory["tag_inventory"][0]
     assert inv["role"] == "layer" and inv["governed"] is True
 
@@ -169,3 +180,140 @@ def test_new_rules_registered_and_in_waf_catalogue():
     assert "tag_policies" in reg.get("GOV-016").requires
     waf_rules = {c.rule for c in load_controls()}
     assert {"GOV-030", "GOV-031", "GOV-033", "GOV-040"} <= waf_rules
+    for rid in ("GOV-034", "GOV-035", "GOV-036", "SEC-040", "SEC-041", "SEC-042"):
+        assert reg.get(rid) is not None, rid
+    assert {"GOV-034", "GOV-035", "GOV-036", "SEC-040", "SEC-042"} <= waf_rules
+
+
+# -- Phase 2: tag hygiene ------------------------------------------------------------
+def test_hygiene_flags_variants_multikey_roles_and_value_case():
+    kv = [{"k": "Camada", "v": "Gold", "n": 2}, {"k": "camada", "v": "gold", "n": 4},
+          {"k": "data_layer", "v": "gold", "n": 1}, {"k": "class.email_address", "v": None, "n": 9},
+          {"k": "Product", "v": "x", "n": 1}]
+    h = tag_hygiene(load_tag_profile(), kv, governed={"camada", "product"}, allowed={})
+    variants = {tuple(v["keys"]) for v in h["drift"]["key_variants"]}
+    assert ("Camada", "camada") in variants
+    assert ("Product", "product") in variants  # ungoverned spelling in use vs governed key
+    assert {"role": "layer", "keys": ["Camada", "camada", "data_layer"]} in h["drift"]["roles_multi_key"]
+    assert {"role": "layer", "values": ["Gold", "gold"]} in h["drift"]["value_variants"]
+    # system tags never count
+    assert all("class.email_address" not in v["keys"] for v in h["drift"]["key_variants"])
+
+
+def test_hygiene_ignores_two_governed_spellings_when_only_one_is_used():
+    h = tag_hygiene(load_tag_profile(), [{"k": "domain", "v": "sales", "n": 1}],
+                    governed={"domain", "Domain"}, allowed={})
+    assert h["drift"]["key_variants"] == []
+
+
+def test_hygiene_invalid_values_and_governed_share():
+    kv = [{"k": "camada", "v": "gold", "n": 4}, {"k": "camada", "v": "platinum", "n": 2},
+          {"k": "phi", "v": "anything", "n": 1}, {"k": "free", "v": "x", "n": 3}]
+    h = tag_hygiene(load_tag_profile(), kv, governed={"camada", "phi"},
+                    allowed={"camada": ["bronze", "silver", "gold"], "phi": []})
+    assert h["invalid"] == [{"key": "camada", "assignments": 2, "values": ["platinum"],
+                             "allowed": ["bronze", "silver", "gold"]}]
+    m = {r["metric"]: r["value"] for r in h["metrics"]}
+    assert m["tag_assignments_governed_pct"] == 70.0 and m["tag_invalid_values"] == 2
+
+
+def test_gov035_finding_and_inventory_invalid_count():
+    pages = [{"tag_policies": [{"tag_key": "camada"}]}]
+    rest, _ = _policy_rest(pages, {"camada": {"values": [{"name": "gold"}]}})
+    usage = [{"tag_key": "camada", "assignments": 3, "distinct_values": 2, "securable_types": "table",
+              "top_values_json": "[]"}]
+    kv = [{"k": "camada", "v": "gold", "n": 1}, {"k": "camada", "v": "Ouro", "n": 2}]
+    res = MetadataCollector(load_tag_profile(), "ws1", "s1", rest=rest).collect(
+        _Spark([_fact("t")], usage=usage, kv=kv))
+    f = next(f for f in res.findings if f.rule_id == "GOV-035")
+    assert f.evidence["assignments"] == 2
+    assert res.inventory["tag_inventory"][0]["invalid_assignments"] == 2
+
+
+# -- Phase 2: protection gap ---------------------------------------------------------
+def _col(c, s, t, col, **kw):
+    return {"c": c, "s": s, "t": t, "col": col, **kw}
+
+
+def test_protection_direct_mask_abac_and_gap():
+    tagged = [_col("cat", "crm", "clients", "email", k="class.email_address", v=""),
+              _col("cat", "crm", "clients", "phone", k="class.phone_number", v=""),
+              _col("cat", "hr", "staff", "ssn", k="pii", v="true"),
+              _col("cat", "hr", "staff", "dept", k="pii", v="false")]  # explicit "not sensitive"
+    masks = [_col("cat", "crm", "clients", "email", mask_name="cat.crm.mask_email")]
+    abac = [{"policy_name": "mask_phone", "c": "cat", "s": "crm", "t": None, "k": "class.phone_number", "v": None}]
+    out = evaluate_protection(tagged, masks, abac, detections=None, candidates=[])
+    by = {r["column"]: r for r in out["columns"]}
+    assert by["email"]["protection"] == "direct_mask"
+    assert by["phone"]["protection"] == "abac_policy" and by["phone"]["protected_by"] == "mask_phone"
+    assert by["ssn"]["protection"] == "none" and "dept" not in by
+    m = {r["metric"]: r["value"] for r in out["metrics"]}
+    assert (m["protection_sensitive_columns"], m["protection_unprotected"]) == (3, 1)
+
+
+def test_abac_scope_must_contain_the_table():
+    tagged = [_col("cat", "hr", "staff", "ssn", k="pii", v="true")]
+    abac = [{"policy_name": "other_schema", "c": "cat", "s": "crm", "t": None, "k": "pii", "v": None},
+            {"policy_name": "wrong_value", "c": "cat", "s": None, "t": None, "k": "pii", "v": "high"}]
+    out = evaluate_protection(tagged, [], abac, detections=None, candidates=[])
+    assert out["columns"][0]["protection"] == "none"
+
+
+def test_name_heuristic_is_separate_and_masked_candidates_drop():
+    cands = [_col("cat", "crm", "leads", "email", hint="email"), _col("cat", "crm", "leads", "phone", hint="phone")]
+    masks = [_col("cat", "crm", "leads", "phone", mask_name="m")]
+    out = evaluate_protection([], masks, [], detections=None, candidates=cands)
+    assert [(r["column"], r["source"]) for r in out["columns"]] == [("email", "name_heuristic")]
+
+
+class _ProtSpark:
+    def __init__(self, tagged=(), masks=(), abac=None, detections=None, cands=()):
+        self.r = {"column_tags": list(tagged), "column_masks": list(masks), "abac": abac,
+                  "data_classification": detections, "RLIKE": list(cands)}
+
+    def sql(self, q):
+        if "abac_policy_definitions" in q:
+            if self.r["abac"] is None:
+                raise RuntimeError("PERMISSION_DENIED")
+            return _DF(self.r["abac"])
+        if "data_classification.results" in q:
+            if self.r["data_classification"] is None:
+                raise RuntimeError("INSUFFICIENT_PERMISSIONS")
+            return _DF(self.r["data_classification"])
+        for key in ("column_tags", "column_masks", "RLIKE"):
+            if key in q:
+                return _DF(self.r[key])
+        return _DF([])
+
+
+def test_protection_collector_findings_and_never_selects_samples():
+    spark = _ProtSpark(tagged=[_col("cat", "hr", "staff", "ssn", k="pii", v="true")], abac=[],
+                       detections=[_col("cat", "crm", "c", "email", k="class.email_address", confidence="HIGH")],
+                       cands=[_col("cat", "crm", "leads", "cpf", hint="cpf")])
+    queries = []
+    orig = spark.sql
+    spark.sql = lambda q: (queries.append(q), orig(q))[1]
+    res = ProtectionCollector(load_tag_profile(), "ws1", "s1").collect(spark)
+    by = {f.rule_id: f for f in res.findings}
+    assert by["SEC-040"].evidence["unprotected"] == 2  # tagged ssn + detected email
+    assert by["SEC-041"].evidence["untagged"] == 1
+    assert by["SEC-042"].evidence["candidates"] == 1
+    assert "GOV-036" not in by  # no REST → classification config unknown, never guessed
+    # the `samples` column (real values) is never selected; 'samples' the catalog only appears in filters
+    dc = [q for q in queries if "data_classification.results" in q]
+    assert dc and all("samples" not in q.split("FROM")[0] for q in dc)
+
+
+def test_gov036_from_classification_config():
+    def rest(method, path, body=None):
+        if "unity-catalog/catalogs" in path:
+            return {"catalogs": [{"name": "sales", "catalog_type": "MANAGED_CATALOG"},
+                                 {"name": "share", "catalog_type": "DELTASHARING_CATALOG"},
+                                 {"name": "hr", "catalog_type": "MANAGED_CATALOG"}]}
+        if "/catalogs/hr/" in path:
+            return {"name": "catalogs/hr/config"}
+        raise RuntimeError("Data Classification config not found")
+    res = ProtectionCollector(load_tag_profile(), "ws1", "s1", rest=rest).collect(_ProtSpark(abac=[]))
+    f = next(f for f in res.findings if f.rule_id == "GOV-036")
+    assert f.evidence["sample"] == ["sales"] and f.evidence["managed_catalogs"] == 2
+

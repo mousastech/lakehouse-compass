@@ -39,15 +39,22 @@ controls:
   - control_id: DBX-SBP:GOV-1
     category: Governance
     title: Tagging is a controlled security boundary
-    description: ABAC tagging privileges (APPLY TAG / ASSIGN) are restricted to stewards.
-    rule_ids: [SEC-030]
+    description: ABAC tagging privileges (APPLY TAG / ASSIGN) are restricted to stewards, and governed tags are applied consistently (no drift, only allowed values).
+    rule_ids: [SEC-030, GOV-016, GOV-034, GOV-035]
     manual: false
 
   - control_id: DBX-SBP:GOV-2
     category: Governance
     title: Certified semantics for analytics and Genie
-    description: Core metrics used by Genie/dashboards come from certified UC metric views.
-    rule_ids: [GEN-013]
+    description: Core metrics used by Genie/dashboards come from certified UC metric views, and canonical gold tables are certified.
+    rule_ids: [GEN-013, GOV-031]
+    manual: false
+
+  - control_id: DBX-SBP:DATA-1
+    category: Data Protection
+    title: Sensitive data is classified and masked
+    description: Catalogs with business data run Data Classification; sensitive columns are tagged and covered by a column mask or a tag-based ABAC policy.
+    rule_ids: [SEC-040, SEC-041, SEC-042, GOV-036]
     manual: false
 
   - control_id: DBX-SBP:DATA-3

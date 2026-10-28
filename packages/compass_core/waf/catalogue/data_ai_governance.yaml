@@ -74,6 +74,42 @@ controls:
       summary: Certify canonical gold tables; mark retired ones deprecated.
       doc_url: https://docs.databricks.com/aws/en/admin/governed-tags/
 
+  - id: DG-TAG-01
+    principle: Tag governance
+    title: One governed key per concept
+    provenance: extension
+    measurability: system_table
+    severity: low
+    criteria: No key/value spelling variants; each Tag Profile role is carried by one key.
+    rule: GOV-034
+    remediation:
+      summary: Consolidate variant keys and values into one governed key per concept.
+      doc_url: https://docs.databricks.com/aws/en/admin/governed-tags/
+
+  - id: DG-TAG-02
+    principle: Tag governance
+    title: Governed tags only carry allowed values
+    provenance: extension
+    measurability: rest_api
+    severity: medium
+    criteria: Every assignment of a governed key uses a value from its tag policy.
+    rule: GOV-035
+    remediation:
+      summary: Re-tag assignments with allowed values or extend the policy.
+      doc_url: https://docs.databricks.com/aws/en/admin/governed-tags/manage-governed-tags
+
+  - id: DG-CLASS-01
+    principle: Classification
+    title: Data Classification is enabled on business catalogs
+    provenance: extension
+    measurability: rest_api
+    severity: low
+    criteria: Managed catalogs have a Data Classification configuration.
+    rule: GOV-036
+    remediation:
+      summary: Enable Data Classification per catalog; review results before auto-tagging.
+      doc_url: https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification
+
   - id: DG-AI-01
     principle: AI governance
     title: Genie Agents are curated

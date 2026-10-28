@@ -12,6 +12,12 @@ const ROLES = ['domain', 'layer', 'owner'] as const;
 type Role = (typeof ROLES)[number];
 
 interface WeakExample { class: string; text: string; n: number; names: number }
+interface Drift {
+  key_variants?: { keys: string[]; in_use?: string[]; governed?: string[] }[];
+  roles_multi_key?: { role: string; keys: string[] }[];
+  value_variants?: { role: string; values: string[] }[];
+}
+interface InvalidValues { key: string; assignments: number; values: string[]; allowed: string[] }
 
 function pct(n: number, d: number): number {
   return d ? Math.round((1000 * n) / d) / 10 : 0;
@@ -72,6 +78,10 @@ export function Governance() {
   });
   const weakByClass = WEAK_CLASSES.map((q) => ({ q, n: v(`column_q_${q}`) })).filter((x) => x.n > 0);
   const examples = parseJson<WeakExample[]>(m['weak_comment_examples']?.raw, []);
+  const hasHygiene = 'tag_drift' in m;
+  const drift = parseJson<Drift>(m['tag_drift']?.raw, {});
+  const invalid = parseJson<InvalidValues[]>(m['tag_invalid_values']?.raw, []);
+  const governedPct = v('tag_assignments_governed_pct');
 
   const rollupRows = useMemo(
     () =>
@@ -100,6 +110,7 @@ export function Governance() {
         governed: r.governed == null ? null : toBool(r.governed),
         where: toStr(r.securable_types),
         assignments: toNum(r.assignments),
+        invalid: toNum(r.invalid_assignments),
         top: parseJson<{ v: string; n: number }[]>(r.top_values_json, []),
       })),
     [inventory.rows]
@@ -246,6 +257,80 @@ export function Governance() {
         </section>
       )}
 
+      {hasHygiene && (
+        <section className="rounded-2xl border border-border bg-card p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold text-card-foreground">{t('gov.hygiene.title')}</h2>
+            <span className="text-xs text-muted-foreground">
+              <span className="tnum font-semibold text-card-foreground">{governedPct}%</span> {t('gov.hygiene.governedShare')}
+            </span>
+          </div>
+          <p className="mb-4 mt-1 text-xs text-muted-foreground">{t('gov.hygiene.help')}</p>
+          <div className="grid gap-5 md:grid-cols-3">
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-card-foreground">{t('gov.hygiene.keyVariants')}</div>
+              {(drift.key_variants ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('gov.hygiene.none')}</p>
+              ) : (
+                <ul className="space-y-1 text-xs">
+                  {(drift.key_variants ?? []).map((g) => (
+                    <li key={g.keys.join('|')} className="font-mono text-card-foreground">
+                      {g.keys.map((k) => (
+                        <span key={k} className="mr-1.5" title={(g.governed ?? []).includes(k) ? t('gov.tags.yes') : t('gov.tags.no')}>
+                          {k}{(g.governed ?? []).includes(k) ? '' : '*'}
+                        </span>
+                      ))}
+                    </li>
+                  ))}
+                  <li className="text-[11px] text-muted-foreground">{t('gov.hygiene.ungovernedMark')}</li>
+                </ul>
+              )}
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-card-foreground">{t('gov.hygiene.rolesMultiKey')}</div>
+              {(drift.roles_multi_key ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('gov.hygiene.none')}</p>
+              ) : (
+                <ul className="space-y-1 text-xs">
+                  {(drift.roles_multi_key ?? []).map((g) => (
+                    <li key={g.role}>
+                      <span className="text-muted-foreground">{t(`gov.role.${g.role}`)}:</span>{' '}
+                      <span className="font-mono text-card-foreground">{g.keys.join(', ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(drift.value_variants ?? []).length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs">
+                  {(drift.value_variants ?? []).map((g) => (
+                    <li key={`${g.role}:${g.values.join('|')}`}>
+                      <span className="text-muted-foreground">{t('gov.hygiene.valueVariants')} ({t(`gov.role.${g.role}`)}):</span>{' '}
+                      <span className="font-mono text-card-foreground">{g.values.join(' / ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <div className="mb-1.5 text-xs font-medium text-card-foreground">{t('gov.hygiene.invalid')}</div>
+              {invalid.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('gov.hygiene.none')}</p>
+              ) : (
+                <ul className="space-y-1.5 text-xs">
+                  {invalid.map((i) => (
+                    <li key={i.key}>
+                      <span className="font-mono text-card-foreground">{i.key}</span>{' '}
+                      <span style={{ color: 'var(--sev-medium)' }}>{i.values.join(', ')}</span>{' '}
+                      <span className="text-muted-foreground">· <span className="tnum">{i.assignments}</span> · {t('gov.hygiene.allowed')}: {i.allowed.join(', ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {tags.length > 0 && (
         <section className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="border-b border-border px-4 py-2.5">
@@ -283,6 +368,11 @@ export function Governance() {
                     </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">
                       {g.governed == null ? '—' : g.governed ? t('gov.tags.yes') : t('gov.tags.no')}
+                      {g.invalid > 0 && (
+                        <span className="ml-1" style={{ color: 'var(--sev-medium)' }}>
+                          · <span className="tnum">{g.invalid}</span> {t('gov.tags.invalid')}
+                        </span>
+                      )}
                     </td>
                     <td className="tnum px-3 py-2 text-right text-muted-foreground">{g.assignments}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{g.where.split(',').map((w) => t(`gov.securable.${w}`)).join(', ')}</td>
