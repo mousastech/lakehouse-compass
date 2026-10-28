@@ -47,7 +47,7 @@ controls:
     category: Governance
     title: Certified semantics for analytics and Genie
     description: Core metrics used by Genie/dashboards come from certified UC metric views, and canonical gold tables are certified.
-    rule_ids: [GEN-013, GOV-031]
+    rule_ids: [GEN-013, GOV-031, GOV-041]
     manual: false
 
   - control_id: DBX-SBP:DATA-1

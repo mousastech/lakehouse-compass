@@ -267,3 +267,23 @@ Medido no workspace de demo:
 Limites honestos:
 - Políticas ABAC só aparecem onde o scan tem MANAGE; a contagem de políticas visíveis acompanha cada finding.
 - Tags de sensibilidade no nível da tabela ainda não entram na SEC-040, que é por coluna.
+
+## 9. Status da Fase 3 (implementada)
+
+| Item | Onde |
+|---|---|
+| Export de candidatas: colunas comentadas das 40 tabelas prioritárias (gold ×3, certificada ×2, leitores distintos em 30 d via lineage do workspace), só metadados | `MetadataCollector._candidates` → `metadata_candidates` |
+| **N2 — Juiz LLM no app** (`compass-llm`): rubrica 0–3 (especificidade, semântica de negócio, plausibilidade, utilidade p/ Genie), veredito good/weak/poor, lotes de 12 com concorrência 3, cache por hash do comentário + `PROMPT_VERSION`, comentários tratados como dado (prompt injection no eval set), INSERT 100% parametrizado | `app/server/metadata/judge.ts`, `POST /api/metadata/review` |
+| **Eval set rotulado** (30 itens en/pt/es, semente) + concordância exata e binária | `POST /api/metadata/eval` |
+| **N3 — Sugestão → ProposedChange** (`ALTER TABLE … ALTER COLUMN … COMMENT`, com rollback para o texto atual), aprovação na tela Changes, nunca executa | `POST /api/metadata/propose` |
+| GOV-041 a partir das revisões ainda vigentes (fecha o ciclo no scan seguinte) | `review_finding` |
+| **P6 — Metadata Readiness** ponderado por leitores: documentação 35% (LLM onde revisado), sensibilidade 25%, ownership 20%, curadoria 20%; por domínio | `compass_core/metadata_readiness.py` |
+| Tabelas escritas pelo app (`metadata_llm_reviews`, `proposed_changes`) criadas pelo scan com `GRANT SELECT, MODIFY` só nelas ao SP do app | `run_scan._ensure_app_tables` |
+
+Medido no workspace de demo antes de qualquer revisão: Metadata Readiness **29,3**. Os componentes:
+- documentação 19,0;
+- sensibilidade 88,8;
+- ownership 1,4;
+- curadoria 1,0.
+
+O export trouxe 410 colunas candidatas de 40 tabelas. Revisar e medir a concordância exige CAN MANAGE no app, porque gasta tokens.

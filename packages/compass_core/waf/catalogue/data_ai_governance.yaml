@@ -38,6 +38,18 @@ controls:
       summary: Rewrite weak comments with meaning, unit, grain and business rule — gold columns first.
       doc_url: https://docs.databricks.com/aws/en/comments/
 
+  - id: DG-META-04
+    principle: Metadata & discoverability
+    title: Descriptions on priority assets pass review
+    provenance: extension
+    measurability: derived
+    severity: medium
+    criteria: Fewer than 20% of LLM-reviewed descriptions on priority tables are weak or poor.
+    rule: GOV-041
+    remediation:
+      summary: Review and propose the suggested rewrites on the Governance screen.
+      doc_url: https://docs.databricks.com/aws/en/comments/
+
   - id: DG-OWN-01
     principle: Ownership & stewardship
     title: Curated assets have an owner
