@@ -33,6 +33,8 @@ resources:
               - "${var.compass_workspace_id}"
               - "--window_days"
               - "30"
+              - "--tag_profile_json"
+              - "${var.tag_profile_json}"
           environment_key: compass_env
 
       environments:

@@ -32,7 +32,9 @@ from typing import Any
 
 from ..models.capability import Availability
 from ..models.finding import Finding, Severity
+from ..tag_profile import TagProfile, load_tag_profile, sql_in
 from .base import CollectorResult, SparkLike, cap, rows_as_dicts
+from .metadata import effective_roles_sql
 
 # ---------------------------------------------------------------------------
 # Canonical pillars / weights / bands (ported verbatim from pillars.py).
@@ -92,10 +94,6 @@ _AUDIT_LOOKBACK_DAYS = 30
 # stays a strict 30d measure (active can therefore legitimately be < total).
 _AGENT_ROSTER_LOOKBACK_DAYS = 180
 
-_DOMAIN_TAG_KEYS = ("domain", "data_domain", "business_domain", "subject_area", "data_product")
-_STEWARD_TAG_KEYS = ("owner", "data_owner", "steward", "data_steward")
-_CERT_TAG_KEYS = ("system.certification_status", "certification_status")
-
 
 def level_from_score(score: float) -> int:
     if score >= 85:
@@ -153,10 +151,16 @@ def _lit(v: str) -> str:
 class GenieReadinessCollector:
     domain = "genie_readiness"
 
-    def __init__(self, workspace_id: str, scan_id: str = "live", workspace_name: str = ""):
+    def __init__(self, workspace_id: str, scan_id: str = "live", workspace_name: str = "",
+                 profile: TagProfile | None = None, quality: dict[str, float] | None = None):
         self.workspace_id = str(workspace_id or "")
         self.workspace_name = workspace_name
         self.scan_id = scan_id
+        # Domain / steward / certification keys come from the Tag Profile, never a fixed list.
+        self.profile = profile or load_tag_profile()
+        # Optional description-quality metrics from the metadata collector (same scan),
+        # surfaced as signals so the column scan isn't repeated here.
+        self.quality = quality or {}
         self.sources: dict[str, Any] = {"system_ok": False, "catalogs": []}
 
     # -- source resolution ---------------------------------------------------
@@ -298,7 +302,8 @@ class GenieReadinessCollector:
             if tt is not None:
                 try:
                     tagged_tables = int(_num(self._scalar(
-                        spark, f"SELECT COUNT(DISTINCT table_name) FROM {tt}")))
+                        spark, "SELECT COUNT(DISTINCT concat_ws('.', catalog_name, schema_name, table_name)) "
+                               f"FROM {tt} WHERE 1=1{self._internal_filter('catalog_name')}")))
                 except Exception:
                     tagged_tables = None
         except Exception as e:
@@ -314,14 +319,22 @@ class GenieReadinessCollector:
         if col_pct < 60:
             gaps.append(f"Only {col_pct}% of columns are commented; aim for high coverage on gold-layer columns.")
         if tagged_tables is not None and t_total and tagged_tables == 0:
-            gaps.append("No governed tags found; tags aid discovery and domain organization.")
+            gaps.append("No UC tags found on tables; tags aid discovery and domain organization.")
 
         signals = [
             {"label": "Tables commented", "value": table_pct, "unit": "%", "detail": f"{t_commented} of {t_total} tables"},
             {"label": "Columns commented", "value": col_pct, "unit": "%", "detail": f"{c_commented} of {c_total} columns"},
         ]
         if tagged_tables is not None:
-            signals.append({"label": "Tagged tables", "value": tagged_tables, "detail": "Tables with ≥1 governed tag"})
+            signals.append({"label": "Tagged tables", "value": tagged_tables, "detail": "Tables with ≥1 UC tag"})
+        if "column_useful_pct" in self.quality:
+            useful = self.quality["column_useful_pct"]
+            signals.append({"label": "Useful column descriptions", "value": useful, "unit": "%",
+                            "detail": "Commented and not generic, echo, placeholder or boilerplate"})
+            weak = round(col_pct - useful, 1)
+            if col_pct and weak / col_pct >= 0.1:
+                gaps.append(f"{weak} pp of column comments are generic or boilerplate — rewrite them with meaning, "
+                            "unit and business rule.")
 
         return {"available": True, "score": score, "signals": signals, "gaps": gaps,
                 "metrics": {"table_comment_pct": table_pct, "column_comment_pct": col_pct,
@@ -483,60 +496,36 @@ class GenieReadinessCollector:
 
     def _p_domains(self, spark: SparkLike) -> dict:
         tt = self._src("table_tags")
-        st = self._src("schema_tags")
         tbl = self._src("tables")
-        if tt is None:
+        if tt is None or tbl is None:
             return _empty("No readable catalogs for the domain/tag proxy (the native UC Domains API is a gated "
                           "preview and isn't read from the scan job).", "insufficient_permission")
+        p = self.profile
         try:
-            dk = ", ".join(_lit(k) for k in _DOMAIN_TAG_KEYS)
-            sk = ", ".join(_lit(k) for k in _STEWARD_TAG_KEYS)
-            ck = ", ".join(_lit(k) for k in _CERT_TAG_KEYS)
-
-            parts = [f"SELECT tag_value FROM {tt} WHERE lower(tag_name) IN ({dk})"]
-            if st is not None:
-                parts.append(f"SELECT tag_value FROM {st} WHERE lower(tag_name) IN ({dk})")
+            # Effective roles per table: Tag Profile keys, catalog/schema inheritance.
+            roles = effective_roles_sql(p, lambda v: self._src(v) or "",
+                                        "table_schema <> 'information_schema'" + self._internal_filter())
             drow = rows_as_dicts(
                 spark,
-                f"SELECT COUNT(DISTINCT tag_value) AS distinct_domains, COUNT(*) AS assignments "
-                f"FROM ({' UNION ALL '.join(parts)})")
-            distinct_domains = int(_num(drow[0].get("distinct_domains"))) if drow else 0
-            assignments = int(_num(drow[0].get("assignments"))) if drow else 0
+                "SELECT COUNT(*) AS total, COUNT(DISTINCT domain) AS distinct_domains, "
+                "COUNT(domain) AS domain_tagged, COUNT(owner) AS stewarded, "
+                f"SUM(CASE WHEN cert IN ({sql_in(p.certified_values)}) THEN 1 ELSE 0 END) AS certified "
+                f"FROM ({roles})")
+            d = drow[0] if drow else {}
+            total_tables = int(_num(d.get("total")))
+            distinct_domains = int(_num(d.get("distinct_domains")))
+            domain_tagged = int(_num(d.get("domain_tagged")))
+            stewarded = int(_num(d.get("stewarded")))
+            certified = int(_num(d.get("certified")))
+            assignments = domain_tagged
 
-            stewarded = 0
-            try:
-                stewarded = int(_num(self._scalar(
-                    spark, f"SELECT COUNT(*) FROM {tt} WHERE lower(tag_name) IN ({sk})")))
-            except Exception:
-                stewarded = 0
-            certified = 0
-            try:
-                certified = int(_num(self._scalar(
-                    spark,
-                    f"SELECT COUNT(DISTINCT concat_ws('.', catalog_name, schema_name, table_name)) "
-                    f"FROM {tt} WHERE lower(tag_name) IN ({ck}) AND lower(tag_value) = 'certified'")))
-            except Exception:
-                certified = 0
-
-            total_tables = governed_tagged = domain_tagged = 0
-            try:
-                total_tables = int(_num(self._scalar(
-                    spark, f"SELECT COUNT(*) FROM {tbl} WHERE table_schema <> 'information_schema'"
-                           f"{self._internal_filter()}"))) if tbl else 0
-            except Exception:
-                total_tables = 0
+            governed_tagged = 0
             try:
                 governed_tagged = int(_num(self._scalar(
                     spark, f"SELECT COUNT(DISTINCT concat_ws('.', catalog_name, schema_name, table_name)) FROM {tt} "
                            f"WHERE 1=1{self._internal_filter('catalog_name')}")))
             except Exception:
                 governed_tagged = 0
-            try:
-                domain_tagged = int(_num(self._scalar(
-                    spark, f"SELECT COUNT(DISTINCT concat_ws('.', catalog_name, schema_name, table_name)) "
-                           f"FROM {tt} WHERE lower(tag_name) IN ({dk}){self._internal_filter('catalog_name')}")))
-            except Exception:
-                domain_tagged = 0
         except Exception as e:
             return _failed(e, "Domains and stewardship")
 
@@ -552,15 +541,15 @@ class GenieReadinessCollector:
 
         gaps = []
         if distinct_domains == 0:
-            gaps.append("No domain-style governed tags found (e.g. a `domain` tag). Organize assets into "
-                        "business-aligned domains.")
+            gaps.append("No domain tags found (keys mapped to the *domain* role in the Tag Profile, e.g. `domain`). "
+                        "Organize assets into business-aligned domains.")
         if stewarded == 0:
             gaps.append("No stewardship tags (owner/steward) found; assign a named steward per domain.")
         if certified == 0:
             gaps.append("No certified assets found — certify canonical gold tables so users (and Genie) know which "
                         "to trust.")
         if total_tables and pct_tagged < 50:
-            gaps.append(f"Only {pct_tagged}% of tables carry any UC governed tag — tag eligible assets "
+            gaps.append(f"Only {pct_tagged}% of tables carry any UC tag — tag eligible assets "
                         "(PII, domain, certification) to power governed discovery.")
         if total_tables and pct_in_domain < 50:
             gaps.append(f"Only {pct_in_domain}% of tables are assigned to a domain — apply domain tags so assets "
@@ -568,17 +557,17 @@ class GenieReadinessCollector:
 
         signals = [
             {"label": "Distinct domains (via tags)", "value": distinct_domains, "detail": "Distinct domain-style tag values"},
-            {"label": "Domain-tagged assets", "value": assignments, "detail": "Assets carrying a domain tag"},
-            {"label": "Stewarded assets", "value": stewarded, "detail": "Assets with an owner/steward tag"},
-            {"label": "Certified assets", "value": certified, "detail": "Tables tagged certification_status = certified"},
+            {"label": "Domain-tagged assets", "value": assignments, "detail": "Tables in a domain (incl. inherited from schema/catalog)"},
+            {"label": "Stewarded assets", "value": stewarded, "detail": "Tables with an owner/steward tag (incl. inherited)"},
+            {"label": "Certified assets", "value": certified, "detail": "Tables certified on the table itself"},
         ]
         if total_tables:
             signals.append({"label": "Tables tagged", "value": pct_tagged, "unit": "%",
-                            "detail": f"{governed_tagged} of {total_tables} tables carry a UC governed tag"})
+                            "detail": f"{governed_tagged} of {total_tables} tables carry a UC tag"})
             signals.append({"label": "Tables in a domain", "value": pct_in_domain, "unit": "%",
                             "detail": f"{domain_tagged} of {total_tables} tables carry a domain tag"})
         return {"available": True, "score": round(score, 1), "signals": signals, "gaps": gaps,
-                "note": "Assessed via governed tags (the native UC Domains feature is a gated preview).",
+                "note": "Assessed via UC tags mapped by the Tag Profile (the native UC Domains feature is a gated preview).",
                 "metrics": {"distinct_domains": distinct_domains, "domain_tag_assignments": assignments,
                             "stewarded_assets": stewarded, "certified_assets": certified,
                             "total_tables": total_tables, "governed_tagged_assets": governed_tagged,

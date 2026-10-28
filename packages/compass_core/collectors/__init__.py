@@ -10,6 +10,7 @@ from .genie import GenieCollector
 from .genie_cost import GenieCostCollector
 from .lakebase import LakebaseCollector
 from .genie_readiness import GenieReadinessCollector
+from .metadata import MetadataCollector
 
 __all__ = [
     "CollectorResult",
@@ -25,4 +26,5 @@ __all__ = [
     "GenieCostCollector",
     "LakebaseCollector",
     "GenieReadinessCollector",
+    "MetadataCollector",
 ]
