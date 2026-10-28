@@ -7,6 +7,7 @@ import { setupDiscoveryRoutes } from './routes/discovery-routes';
 import { setupHistoryRoutes } from './routes/history-routes';
 import { setupScanRoutes } from './routes/scan-routes';
 import { setupTeachRoutes } from './routes/teach-routes';
+import { setupMetadataRoutes } from './routes/metadata-routes';
 
 // Phase 0: server plugin only. It binds 0.0.0.0 on DATABRICKS_APP_PORT, serves
 // the built client from client/dist with SPA fallback, and handles graceful
@@ -29,6 +30,7 @@ createApp({
     setupHistoryRoutes(appkit);
     setupScanRoutes(appkit);
     setupTeachRoutes(appkit);
+    setupMetadataRoutes(appkit);
     await appkit.server.start();
   })
   .catch((err) => {

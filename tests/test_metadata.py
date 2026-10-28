@@ -317,3 +317,70 @@ def test_gov036_from_classification_config():
     f = next(f for f in res.findings if f.rule_id == "GOV-036")
     assert f.evidence["sample"] == ["sales"] and f.evidence["managed_catalogs"] == 2
 
+
+
+# -- Phase 3: Metadata Readiness + LLM review ---------------------------------------
+from compass_core.collectors.metadata import review_finding  # noqa: E402
+from compass_core.metadata_readiness import WEIGHTS, readiness_index, readiness_metrics, table_scores  # noqa: E402
+
+
+def _t(n, readers=0, **kw):
+    f = _fact(n, **kw)
+    f["readers"] = readers
+    return f
+
+
+def test_readiness_components_and_usage_weighting():
+    p = load_tag_profile()
+    perfect = _t("gold", readers=40, table_q="useful", domain="Sales", layer="gold", owner="ana", cert="certified", useful=10)
+    bare = _t("staging", readers=0, table_q="missing", useful=0, missing=10)
+    rows = {r["table"]: r for r in table_scores(p, [perfect, bare], [], [])}
+    assert rows["gold"]["score"] == sum(WEIGHTS.values())  # 1.0
+    # no sensitive columns → sensitivity is resolved by default; nothing else earned
+    assert round(rows["staging"]["score"], 2) == WEIGHTS["sensitivity"]
+    idx = readiness_index(list(rows.values()))
+    assert idx["index"] > idx["unweighted"]  # the widely read table dominates
+
+
+def test_readiness_sensitivity_and_llm_credit():
+    p = load_tag_profile()
+    f = _t("crm", table_q="useful", useful=4)
+    sens = [{"catalog": "cat", "schema": "sch", "table": "crm", "source": "tag", "protection": "direct_mask"},
+            {"catalog": "cat", "schema": "sch", "table": "crm", "source": "name_heuristic", "protection": "none"}]
+    reviews = [{"catalog": "cat", "schema": "sch", "table": "crm", "verdict": v} for v in ("poor", "poor", "weak", "good")]
+    r = table_scores(p, [f], sens, reviews)[0]
+    assert r["sensitivity"] == 0.5
+    # 4 documented columns, all reviewed: credit 0+0+0.5+1 = 1.5 of 4 → col doc 0.375
+    assert round(r["documentation"], 4) == round(0.5 + 0.5 * 0.375, 4)
+
+
+def test_readiness_metrics_shape_by_domain():
+    p = load_tag_profile()
+    metrics, domains = readiness_metrics(p, [_t("a", domain="Sales"), _t("b")], [], [])
+    names = {m["metric"] for m in metrics}
+    assert {"metadata_readiness", "metadata_readiness_unweighted", "mr_documentation", "mr_curation"} <= names
+    assert [d["domain"] for d in domains] == ["Sales", ""]  # untagged bucket last
+
+
+def test_review_finding_threshold_and_severity():
+    good = [{"verdict": "good"}] * 8
+    assert review_finding(good + [{"verdict": "weak"}], "s", "ws") is None  # 11% < 20%
+    f = review_finding(good[:3] + [{"verdict": "poor", "reason": "restates name"}] * 3, "s", "ws")
+    assert f.rule_id == "GOV-041" and f.evidence["pct"] == 50.0 and f.severity.value == "medium"
+    assert review_finding([], "s", "ws") is None
+
+
+def test_candidate_priority_prefers_curated_and_read_tables():
+    mc = MetadataCollector(load_tag_profile(), "ws1", "s1")
+    gold = _t("g", layer="gold", cert="certified")
+    few = _t("r", readers=3)
+    many = _t("m", readers=20)
+    plain = _t("p")
+    assert mc.priority(gold) > mc.priority(few) > mc.priority(plain) == 0
+    assert mc.priority(many) > mc.priority(gold)  # a table 20 people read outranks an unread gold one
+
+
+def test_gov041_rule_registered_and_mapped():
+    reg = RuleRegistry()
+    assert reg.get("GOV-041").domain == "governance"
+    assert "GOV-041" in {c.rule for c in load_controls()}

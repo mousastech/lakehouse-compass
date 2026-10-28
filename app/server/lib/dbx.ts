@@ -30,14 +30,27 @@ export async function getSpToken(host = normHost()): Promise<string> {
 
 const WAREHOUSE = () => process.env.DATABRICKS_WAREHOUSE_ID || '';
 
-/** Execute read-only SQL via the Statements API; returns object rows. */
-export async function runSql(statement: string): Promise<Record<string, unknown>[]> {
+export interface SqlParam {
+  name: string;
+  value: string | null;
+  type?: 'STRING' | 'INT' | 'DOUBLE';
+}
+
+/** Execute read-only SQL via the Statements API; returns object rows. Pass
+ *  `parameters` (named :markers) for any value that comes from data — never
+ *  interpolate catalog text into SQL. */
+export async function runSql(statement: string, parameters?: SqlParam[]): Promise<Record<string, unknown>[]> {
   const host = normHost();
   const token = await getSpToken(host);
   const post = await fetch(`${host}/api/2.0/sql/statements`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ warehouse_id: WAREHOUSE(), statement, wait_timeout: '30s' }),
+    body: JSON.stringify({
+      warehouse_id: WAREHOUSE(),
+      statement,
+      wait_timeout: '30s',
+      ...(parameters?.length ? { parameters: parameters.map((p) => ({ name: p.name, value: p.value, type: p.type ?? 'STRING' })) } : {}),
+    }),
   });
   if (!post.ok) throw new Error(`sql failed (${post.status}): ${(await post.text()).slice(0, 160)}`);
   let body = (await post.json()) as any;

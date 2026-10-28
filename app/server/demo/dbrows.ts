@@ -170,6 +170,20 @@ export const governanceMetricsRows = [
   { metric: 'protection_abac_visible', value: 0, detail: '' },
   { metric: 'protection_detections_readable', value: 0, detail: 'system.data_classification.results' },
   { metric: 'classification_catalogs_enabled', value: 0, detail: 'of 3' },
+  // Metadata Readiness (usage-weighted index, P6).
+  { metric: 'metadata_readiness', value: 41.2, detail: 'usage-weighted over 1213 tables; 0 LLM-reviewed columns' },
+  { metric: 'metadata_readiness_unweighted', value: 37.8, detail: '' },
+  { metric: 'mr_documentation', value: 24.5, detail: '0.35' },
+  { metric: 'mr_sensitivity', value: 88.1, detail: '0.25' },
+  { metric: 'mr_ownership', value: 2.1, detail: '0.2' },
+  { metric: 'mr_curation', value: 1.4, detail: '0.2' },
+];
+
+// Metadata Readiness by domain (mirrors metadata_readiness_domains). domain '' = untagged.
+export const metadataReadinessDomainsRows = [
+  { domain: 'Seguros MetLife', tables: 29, index: 46.3, unweighted: 44.0, documentation: 12.0, sensitivity: 100, ownership: 50, curation: 47.4 },
+  { domain: 'Arrecadacao', tables: 2, index: 43.8, unweighted: 43.8, documentation: 0, sensitivity: 100, ownership: 50, curation: 25 },
+  { domain: '', tables: 1179, index: 41.0, unweighted: 37.6, documentation: 25.0, sensitivity: 87.8, ownership: 0, curation: 0.1 },
 ];
 
 // Sensitive / likely-sensitive columns and their protection (mirrors sensitive_columns).

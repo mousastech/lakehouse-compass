@@ -35,6 +35,8 @@ resources:
               - "30"
               - "--tag_profile_json"
               - "${var.tag_profile_json}"
+              - "--app_sp"
+              - "${var.app_service_principal}"
           environment_key: compass_env
 
       environments:

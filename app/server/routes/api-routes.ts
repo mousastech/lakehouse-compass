@@ -18,6 +18,7 @@ import {
   tagInventoryRows,
   sensitiveColumnsRows,
   classificationCoverageRows,
+  metadataReadinessDomainsRows,
   perfSummaryRows,
   computeInventoryRows,
   usageSummaryRows,
@@ -81,6 +82,7 @@ export function setupApiRoutes(appkit: AppKitServer): void {
     app.get('/api/rows/tag_inventory', (_req, res) => res.json(tagInventoryRows));
     app.get('/api/rows/sensitive_columns', (_req, res) => res.json(sensitiveColumnsRows));
     app.get('/api/rows/classification_coverage', (_req, res) => res.json(classificationCoverageRows));
+    app.get('/api/rows/metadata_readiness_domains', (_req, res) => res.json(metadataReadinessDomainsRows));
     app.get('/api/rows/perf_summary', (_req, res) => res.json(perfSummaryRows));
     app.get('/api/rows/compute_inventory', (_req, res) => res.json(computeInventoryRows));
     app.get('/api/rows/usage_summary', (_req, res) => res.json(usageSummaryRows));

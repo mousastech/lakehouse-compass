@@ -29,6 +29,7 @@ metadata.
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections import defaultdict
 from typing import Any, Callable, Optional
@@ -49,6 +50,8 @@ BOILERPLATE_MIN_NAMES = 3   # identical text reused on ≥ N different names
 _SAMPLE = 10
 _MAX_POLICY_LOOKUPS = 200   # allowed-values lookups (one GET per governed key in use)
 _MAX_TAG_VALUES = 20000     # distinct (key, value) pairs read for hygiene checks
+_CANDIDATE_TABLES = 40      # priority tables exported for the in-app LLM review
+_CANDIDATE_COLUMNS = 1500   # cap on exported column comments per scan
 
 # Full-match patterns (lower-cased, trimmed). Bracket classes instead of
 # backslash escapes so they survive Spark SQL string-literal unescaping.
@@ -185,6 +188,53 @@ class MetadataCollector:
         """
         return rows_as_dicts(spark, sql)
 
+    def _table_reads(self, spark: SparkLike) -> dict[str, dict[str, int]]:
+        """Reads and distinct readers per table in the last 30 days, from this
+        workspace's lineage (the metastore is shared across workspaces)."""
+        ws = f" AND CAST(workspace_id AS STRING) = {sql_str(self.workspace_id)}" if self.workspace_id else ""
+        rows = rows_as_dicts(spark, f"""
+            SELECT source_table_full_name AS fq, COUNT(*) AS reads, COUNT(DISTINCT created_by) AS readers
+            FROM system.access.table_lineage
+            WHERE event_date >= current_date() - INTERVAL 30 DAYS AND source_table_full_name IS NOT NULL{ws}
+            GROUP BY source_table_full_name""")
+        return {str(r["fq"]): {"reads": int(r.get("reads") or 0), "readers": int(r.get("readers") or 0)} for r in rows}
+
+    def priority(self, f: dict[str, Any]) -> float:
+        """Review priority of a table: curated, certified and widely read first."""
+        cert = str(f.get("cert") or "").lower() in self.profile.certified_values
+        return round(3.0 * self._is_gold(f) + 2.0 * cert + 2.0 * math.log1p(int(f.get("readers") or 0))
+                     + 0.5 * math.log1p(int(f.get("reads") or 0)), 3)
+
+    def _candidates(self, spark: SparkLike, facts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Commented columns of the top-priority tables, for the in-app LLM review.
+        Metadata text only (names, types, comments) — never data values."""
+        ranked = sorted((f for f in facts if int(f.get("col_total") or 0) > int(f.get("col_missing") or 0)),
+                        key=lambda f: -self.priority(f))[:_CANDIDATE_TABLES]
+        if not ranked:
+            return []
+        prio = {(f["c"], f["s"], f["n"]): self.priority(f) for f in ranked}
+        keys = ", ".join(f"({sql_str(c)}, {sql_str(sc)}, {sql_str(n)})" for c, sc, n in prio)
+        q = quality_case_sql("trim(col.comment)", "col.column_name", "false")
+        rows = rows_as_dicts(spark, f"""
+            SELECT col.table_catalog AS c, col.table_schema AS s, col.table_name AS t, col.column_name AS col,
+                   col.data_type, trim(col.comment) AS comment, trim(tb.comment) AS table_comment, {q} AS heuristic,
+                   sha2(concat_ws('|', col.table_catalog, col.table_schema, col.table_name, col.column_name,
+                                  trim(col.comment)), 256) AS comment_hash
+            FROM {_system_src('columns')} col
+            JOIN {_system_src('tables')} tb ON tb.table_catalog = col.table_catalog
+              AND tb.table_schema = col.table_schema AND tb.table_name = col.table_name
+            WHERE (col.table_catalog, col.table_schema, col.table_name) IN ({keys})
+              AND col.comment IS NOT NULL AND trim(col.comment) <> ''
+            ORDER BY col.table_catalog, col.table_schema, col.table_name, col.ordinal_position""")
+        out = []
+        for r in rows:
+            out.append(self._row(catalog=r["c"], schema=r["s"], table=r["t"], column=r["col"],
+                                 data_type=r.get("data_type"), comment=r.get("comment"),
+                                 table_comment=r.get("table_comment"), heuristic=r.get("heuristic"),
+                                 comment_hash=r.get("comment_hash"), priority=float(prio[(r["c"], r["s"], r["t"])])))
+        out.sort(key=lambda r: -r["priority"])
+        return out[:_CANDIDATE_COLUMNS]
+
     def _weak_examples(self, spark: SparkLike) -> list[dict[str, Any]]:
         """Most frequent non-useful column comments (metadata text, never data)."""
         where = "table_schema <> 'information_schema'" + internal_filter("table_catalog")
@@ -269,6 +319,14 @@ class MetadataCollector:
         res = CollectorResult()
         try:
             facts = self._table_facts(spark)
+            try:
+                reads = self._table_reads(spark)
+            except Exception as e:  # lineage is optional: priority falls back to curation only
+                print(f"[compass] table lineage failed: {str(e)[:160]}")
+                reads = {}
+            for f in facts:
+                u = reads.get(f"{f.get('c')}.{f.get('s')}.{f.get('n')}", {})
+                f["reads"], f["readers"] = u.get("reads", 0), u.get("readers", 0)
             res.capabilities.append(cap("tags", "system.information_schema", Availability.AVAILABLE))
         except Exception as e:
             res.capabilities.append(cap("tags", "system.information_schema", Availability.NOT_AVAILABLE, str(e)[:300]))
@@ -308,6 +366,13 @@ class MetadataCollector:
         res.inventory["governance_metrics"] = self._quality_metrics(facts, examples) + [
             {"scan_id": self.scan_id, "workspace_id": self.workspace_id, **r} for r in hygiene["metrics"]]
         res.inventory["tag_rollup"] = self._rollup(facts)
+        try:
+            res.inventory["metadata_candidates"] = self._candidates(spark, facts)
+        except Exception as e:
+            print(f"[compass] metadata candidates failed: {str(e)[:160]}")
+        # Per-table facts feed the Metadata Readiness index (computed after the
+        # protection collector in the scan job); kept in memory, not persisted.
+        res.inventory["_table_facts"] = facts
         res.inventory["tag_inventory"] = self._inventory(usage, governed, allowed, hygiene["invalid_by_key"])
         res.findings += self._findings(facts, usage, governed)
         res.findings += self._hygiene_findings(hygiene)
@@ -587,3 +652,34 @@ def tag_hygiene(profile: TagProfile, kv: list[dict[str, Any]], governed: Optiona
     return {"drift": {"key_variants": key_variants, "roles_multi_key": roles_multi_key,
                       "value_variants": value_variants},
             "invalid": invalid, "invalid_by_key": invalid_by_key, "metrics": metrics}
+
+
+def review_finding(reviews: list[dict[str, Any]], scan_id: str, workspace_id: str,
+                   workspace_name: str = "") -> Optional[Finding]:
+    """GOV-041 from the in-app LLM review of priority columns (previous runs).
+
+    Fires when at least 20% of the reviewed columns are judged weak or poor.
+    Reviews come from the app (compass-llm), so this lags one scan behind them.
+    """
+    judged = [r for r in reviews if str(r.get("verdict") or "").lower() in ("good", "weak", "poor")]
+    if not judged:
+        return None
+    bad = [r for r in judged if str(r["verdict"]).lower() in ("weak", "poor")]
+    share = round(100.0 * len(bad) / len(judged), 1)
+    if share < 20.0:
+        return None
+    poor = sum(1 for r in bad if str(r["verdict"]).lower() == "poor")
+    sample = [f"{r.get('catalog')}.{r.get('schema')}.{r.get('table')}.{r.get('column')}: {r.get('reason') or ''}"[:180]
+              for r in sorted(bad, key=lambda r: str(r["verdict"]).lower() != "poor")[:_SAMPLE]]
+    return Finding(
+        id=f"{scan_id}-GOV-041-{workspace_id}", rule_id="GOV-041", domain="governance",
+        title="Low-quality descriptions on priority assets (LLM review)",
+        severity=Severity.MEDIUM if share >= 40 else Severity.LOW,
+        resource=f"{len(bad)} of {len(judged)} reviewed columns",
+        evidence={"reviewed": len(judged), "weak_or_poor": len(bad), "poor": poor, "pct": share,
+                  "models": sorted({str(r.get("model") or "") for r in judged}), "sample": sample,
+                  "note": "Judged by the governed compass-llm endpoint with a fixed rubric; suggestions are "
+                          "drafted as ProposedChanges for human approval."},
+        remediation="Review the suggested rewrites on the Governance screen and propose the ones that are right.",
+        framework_controls=["DBX-SBP:GOV-2"], scan_id=scan_id, workspace_id=workspace_id,
+        workspace_name=workspace_name)

@@ -50,6 +50,9 @@ def parse_args() -> argparse.Namespace:
                    help="Scan every billing-active workspace (capped by --max_workspaces).")
     p.add_argument("--max_workspaces", type=int, default=25,
                    help="Cap when scanning all workspaces, so discovery of thousands never runs unbounded.")
+    p.add_argument("--app_sp", default="",
+                   help="App service principal; granted SELECT+MODIFY on the tables the app writes "
+                        "(LLM description reviews, proposed changes).")
     p.add_argument("--tag_profile_json", default="",
                    help="JSON extending the default Tag Profile (compass_core/tag_profile.yaml); lists are unioned.")
     known, _ = p.parse_known_args()
@@ -201,6 +204,16 @@ def _schemas():
             S("distinct_values", LongType()), S("top_values_json"),
             S("allowed_values_json"), S("invalid_assignments", LongType()),
         ]),
+        "metadata_candidates": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("catalog"), S("schema"), S("table"),
+            S("column"), S("data_type"), S("comment"), S("table_comment"), S("heuristic"), S("comment_hash"),
+            S("priority", DoubleType()),
+        ]),
+        "metadata_readiness_domains": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("domain"), S("tables", LongType()),
+            S("index", DoubleType()), S("unweighted", DoubleType()), S("documentation", DoubleType()),
+            S("sensitivity", DoubleType()), S("ownership", DoubleType()), S("curation", DoubleType()),
+        ]),
         "sensitive_columns": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("catalog"), S("schema"), S("table"),
             S("column"), S("source"), S("tag_key"), S("tag_value"), S("tagged", BooleanType()),
@@ -248,6 +261,46 @@ def _write(spark, fq: str, name: str, rows: list[dict], mode: str = "append") ->
     else:
         writer = writer.option("mergeSchema", "true")
     writer.saveAsTable(f"{fq}.{name}")
+
+
+# Tables the APP writes (scan-owned so a fresh deployment works without manual DDL).
+_APP_TABLES = {
+    "metadata_llm_reviews": (
+        "review_id STRING, workspace_id STRING, catalog STRING, `schema` STRING, `table` STRING, `column` STRING, "
+        "comment_hash STRING, comment STRING, verdict STRING, specificity INT, business_semantics INT, "
+        "plausibility INT, genie_usefulness INT, score DOUBLE, reason STRING, suggestion STRING, model STRING, "
+        "prompt_version STRING, reviewed_by STRING, reviewed_at STRING"),
+    "proposed_changes": (
+        "change_id STRING, finding_id STRING, rule_id STRING, workspace_id STRING, title STRING, steps STRING, "
+        "code STRING, rollback STRING, blast_radius STRING, confidence STRING, status STRING, created_by STRING, "
+        "created_at STRING, decided_by STRING, decided_at STRING"),
+}
+
+
+def _ensure_app_tables(spark, fq: str, app_sp: str) -> None:
+    """Create the app-written tables if missing and grant the app SP exactly
+    SELECT + MODIFY on them (least privilege: nothing else in the schema)."""
+    for name, cols in _APP_TABLES.items():
+        try:
+            spark.sql(f"CREATE TABLE IF NOT EXISTS {fq}.{name} ({cols})")
+            if app_sp:
+                spark.sql(f"GRANT SELECT, MODIFY ON TABLE {fq}.{name} TO `{app_sp}`")
+        except Exception as e:  # never block the scan on a grant
+            print(f"[compass] ensure {name} failed: {str(e)[:160]}")
+
+
+def _latest_reviews(spark, fq: str, ws: str) -> list[dict]:
+    """Most recent LLM review per comment hash for this workspace."""
+    from compass_core.collectors.base import rows_as_dicts
+
+    try:
+        return rows_as_dicts(spark, f"""
+            SELECT * FROM (
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY comment_hash ORDER BY reviewed_at DESC) AS rk
+              FROM {fq}.metadata_llm_reviews WHERE workspace_id = '{ws}') WHERE rk = 1""")
+    except Exception as e:
+        print(f"[compass] reading LLM reviews failed: {str(e)[:160]}")
+        return []
 
 
 def _resolve_workspace_id(spark, cli_value: str) -> str:
@@ -327,6 +380,8 @@ def run_live(args) -> None:
     )
     from compass_core.collectors.base import cap
     from compass_core.tag_profile import load_tag_profile
+    from compass_core.collectors.metadata import review_finding
+    from compass_core.metadata_readiness import readiness_metrics
     from compass_core.capabilities.manager import PROBES
     from compass_core.compliance import ComplianceMapper, load_framework
     from compass_core.models.capability import Availability
@@ -341,6 +396,7 @@ def run_live(args) -> None:
     fq = f"{args.catalog}.{args.schema}"
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {fq}")
     now = datetime.now(timezone.utc).isoformat()
+    _ensure_app_tables(spark, fq, getattr(args, "app_sp", ""))
 
     # ---- workspace discovery (written once) ----
     ws_map, disco_via = _discover_workspaces(spark)
@@ -482,6 +538,8 @@ def run_live(args) -> None:
         tag_inventory: list = []
         sensitive_columns: list = []
         classification_coverage: list = []
+        metadata_candidates: list = []
+        metadata_readiness_domains: list = []
         if is_local:
             # Tag-based monitoring + description quality — metastore-wide UC metadata, so
             # (like the readiness UC pillars) it runs once, for the local workspace.
@@ -502,6 +560,20 @@ def run_live(args) -> None:
             gov_metrics = gov_metrics + prot.inventory.get("governance_metrics", [])
             sensitive_columns = prot.inventory.get("sensitive_columns", [])
             classification_coverage = prot.inventory.get("classification_coverage", [])
+
+            # LLM reviews written by the app since earlier scans, restricted to comments
+            # that are still current (the hash covers the comment text) → GOV-041 + index.
+            metadata_candidates = md.inventory.get("metadata_candidates", [])
+            current = {c["comment_hash"] for c in metadata_candidates}
+            reviews = [r for r in _latest_reviews(spark, fq, ws) if r.get("comment_hash") in current]
+            gov041 = review_finding(reviews, scan_id, ws, ws_name)
+            if gov041:
+                findings.append(gov041)
+            mr_metrics, metadata_readiness_domains = readiness_metrics(
+                tag_profile, md.inventory.get("_table_facts", []), sensitive_columns, reviews)
+            gov_metrics = gov_metrics + [{"scan_id": scan_id, "workspace_id": ws, **m} for m in mr_metrics]
+            metadata_readiness_domains = [{"scan_id": scan_id, "workspace_id": ws, "workspace_name": ws_name, **d}
+                                          for d in metadata_readiness_domains]
 
             gen = GenieCollector(rest, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect()
             findings += gen.findings
@@ -669,6 +741,10 @@ def run_live(args) -> None:
             _write(spark, fq, "tag_inventory", tag_inventory)
         if sensitive_columns:
             _write(spark, fq, "sensitive_columns", sensitive_columns)
+        if metadata_candidates:
+            _write(spark, fq, "metadata_candidates", metadata_candidates)
+        if metadata_readiness_domains:
+            _write(spark, fq, "metadata_readiness_domains", metadata_readiness_domains)
         if classification_coverage:
             _write(spark, fq, "classification_coverage", classification_coverage)
         if genie_cost_summary:

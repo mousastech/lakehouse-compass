@@ -190,3 +190,27 @@ rules:
       Enable); scans are billed under the DATA_CLASSIFICATION billing origin.
     docs:
       - https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification
+
+  - id: GOV-041
+    domain: governance
+    title: Low-quality descriptions on priority assets (LLM review)
+    description: >
+      At least 20% of the reviewed column descriptions on priority tables
+      (curated, certified, most read) were judged weak or poor by the governed
+      compass-llm endpoint with a fixed rubric (specificity, business meaning,
+      plausibility, usefulness for Genie). Reviews run in the app and are picked
+      up by the next scan; only reviews of comments that are still current count.
+    severity: medium
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      The columns people actually use have descriptions that do not explain
+      them. Review the suggested rewrites and propose the right ones.
+    remediation: >
+      On the Governance screen, review the LLM suggestions, select the correct
+      ones and propose them; apply the approved statements outside Compass.
+    docs:
+      - https://docs.databricks.com/aws/en/comments/
+

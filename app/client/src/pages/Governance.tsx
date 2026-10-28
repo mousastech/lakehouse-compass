@@ -6,6 +6,8 @@ import { useT } from '../lib/i18n';
 import { scoreColorVar } from '../lib/domains';
 import { SourceBadge } from '../components/SourceBadge';
 import { FindingsList } from '../components/FindingsList';
+import { MetadataReadinessCard } from '../components/MetadataReadinessCard';
+import { DescriptionReviewPanel } from '../components/DescriptionReviewPanel';
 
 const WEAK_CLASSES = ['generic', 'echo', 'placeholder', 'short', 'boilerplate'] as const;
 const ROLES = ['domain', 'layer', 'owner'] as const;
@@ -123,6 +125,8 @@ export function Governance() {
         <SourceBadge source={metrics.source} />
       </div>
 
+      <MetadataReadinessCard metrics={m} ws={ws} />
+
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="mb-4 text-sm font-semibold text-card-foreground">{t('gov.semanticReadiness')}</h2>
         <div className="flex flex-wrap items-center gap-8">
@@ -197,6 +201,8 @@ export function Governance() {
           )}
         </section>
       )}
+
+      <DescriptionReviewPanel ws={ws} />
 
       {rollup.rows.length > 0 && (
         <section className="overflow-hidden rounded-xl border border-border bg-card">

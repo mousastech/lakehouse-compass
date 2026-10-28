@@ -21,12 +21,12 @@ Rules you must always follow:
 - Use the provided tools to fetch Compass's own data for the selected workspace. Be concise and specific.
 - ALWAYS call the tools you need BEFORE answering (typically get_scores and get_findings; add get_cost_summary/get_compliance/get_capabilities as relevant). Do NOT ask the user clarifying questions about filters — if a filter is unspecified, call the tool with no filter. Ground every statement in tool results and cite the finding/rule ids you saw.`;
 
-function userEmail(req: Request): string {
+export function userEmail(req: Request): string {
   return (req.header('x-forwarded-email') || req.header('x-forwarded-user') || 'app-user').toString();
 }
 
 // Verify the acting user holds CAN MANAGE on the Compass app (Apps permissions API).
-async function userCanManage(email: string): Promise<boolean> {
+export async function userCanManage(email: string): Promise<boolean> {
   try {
     const host = normHost();
     const token = await getSpToken(host);
