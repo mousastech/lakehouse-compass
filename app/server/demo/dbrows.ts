@@ -144,6 +144,46 @@ export const governanceMetricsRows = [
       { class: 'boilerplate', text: 'Schema containing the table.', n: 5, names: 3 },
     ]),
   },
+  // Tag hygiene (metadata collector).
+  { metric: 'tag_assignments_total', value: 45, detail: 'excluding Databricks system tags' },
+  { metric: 'tag_assignments_governed_pct', value: 20, detail: '' },
+  {
+    metric: 'tag_drift',
+    value: 4,
+    detail: JSON.stringify({
+      key_variants: [{ keys: ['Product', 'product'], in_use: ['product'], governed: ['Product'] }],
+      roles_multi_key: [
+        { role: 'domain', keys: ['area_negocio', 'domain', 'dominio_negocio'] },
+        { role: 'layer', keys: ['camada', 'data_layer'] },
+      ],
+      value_variants: [{ role: 'layer', values: ['Gold', 'gold'] }],
+    }),
+  },
+  { metric: 'tag_invalid_values', value: 0, detail: '[]' },
+  // Sensitive data × protection (protection collector).
+  { metric: 'protection_sensitive_columns', value: 0, detail: 'tagged or detected (HIGH)' },
+  { metric: 'protection_direct_mask', value: 0, detail: '' },
+  { metric: 'protection_abac', value: 0, detail: '' },
+  { metric: 'protection_unprotected', value: 0, detail: '' },
+  { metric: 'protection_name_candidates', value: 265, detail: 'name heuristic, unmasked, untagged' },
+  { metric: 'protection_masks_total', value: 6, detail: 'direct column masks' },
+  { metric: 'protection_abac_visible', value: 0, detail: '' },
+  { metric: 'protection_detections_readable', value: 0, detail: 'system.data_classification.results' },
+  { metric: 'classification_catalogs_enabled', value: 0, detail: 'of 3' },
+];
+
+// Sensitive / likely-sensitive columns and their protection (mirrors sensitive_columns).
+export const sensitiveColumnsRows = [
+  { catalog: 'moi_ai_catalog', schema: 'crm', table: 'clientes', column: 'email', source: 'name_heuristic', tag_key: 'email', tag_value: '', tagged: false, protection: 'none', protected_by: '' },
+  { catalog: 'moi_ai_catalog', schema: 'crm', table: 'clientes', column: 'telefone', source: 'name_heuristic', tag_key: 'phone', tag_value: '', tagged: false, protection: 'none', protected_by: '' },
+  { catalog: 'rtpa_catalog', schema: 'pixels', table: 'patients', column: 'birth_date', source: 'name_heuristic', tag_key: 'birth_date', tag_value: '', tagged: false, protection: 'none', protected_by: '' },
+];
+
+// Data Classification enablement per managed catalog (mirrors classification_coverage).
+export const classificationCoverageRows = [
+  { catalog: 'aleksandar_fevm_catalog', enabled: false, detail: 'no Data Classification config' },
+  { catalog: 'moi_ai_catalog', enabled: false, detail: 'no Data Classification config' },
+  { catalog: 'rtpa_catalog', enabled: false, detail: 'no Data Classification config' },
 ];
 
 // Scorecard by tag role (mirrors moi_ai_catalog.lakehouse_compass.tag_rollup). value '' = untagged.
@@ -161,7 +201,7 @@ export const tagRollupRows = [
 export const tagInventoryRows = [
   { tag_key: 'dominio_negocio', role: 'domain', suggested_role: '', governed: false, securable_types: 'schema,table', assignments: 11, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'Seguros MetLife', n: 11 }]) },
   { tag_key: 'accelerator', role: '', suggested_role: '', governed: false, securable_types: 'schema,table', assignments: 7, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'pixels', n: 7 }]) },
-  { tag_key: 'camada', role: 'layer', suggested_role: '', governed: true, securable_types: 'schema,table', assignments: 6, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'gold', n: 6 }]) },
+  { tag_key: 'camada', role: 'layer', suggested_role: '', governed: true, securable_types: 'schema,table', assignments: 6, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'gold', n: 6 }]), allowed_values_json: JSON.stringify(['bronze', 'silver', 'gold']), invalid_assignments: 0 },
   { tag_key: 'certificado', role: 'certification', suggested_role: '', governed: false, securable_types: 'schema,table', assignments: 5, distinct_values: 2, top_values_json: JSON.stringify([{ v: 'sim', n: 3 }, { v: 'workshop', n: 2 }]) },
   { tag_key: 'phi', role: 'sensitivity', suggested_role: '', governed: true, securable_types: 'table', assignments: 1, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'false', n: 1 }]) },
   { tag_key: 'gov_data_domain', role: '', suggested_role: 'domain', governed: true, securable_types: 'table', assignments: 1, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'finance', n: 1 }]) },

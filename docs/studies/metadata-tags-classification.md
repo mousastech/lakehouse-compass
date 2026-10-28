@@ -247,3 +247,23 @@ passou a NOT_AVAILABLE, que é o estado real sem grant.
 Ficou para as próximas fases: filtro global por tag no top bar e escopo de monitoramento em Settings
 (P2), GOV-032 (deprecated ainda consultado), higiene de tags (P3), lacuna de proteção (P4), juiz LLM no
 app e ProposedChange de descrições (P5), índice unificado (P6).
+
+## 8. Status da Fase 2 (implementada)
+
+| Item | Onde |
+|---|---|
+| **P3 — Higiene de tags:** variantes de grafia de chave (inclui chave não governada em uso que é variante de uma governada), papel espalhado em várias chaves, variantes de valor (`Gold`/`gold`), valores fora da lista permitida (um GET por chave governada em uso), % de atribuições governadas | `collectors/metadata.py` `tag_hygiene`; regras GOV-034, GOV-035 |
+| **P4 — Lacuna de proteção:** coluna sensível (tag no papel *sensitivity* ou detecção HIGH) × máscara direta (`column_masks`) × política ABAC `COLUMN_MASK` cujas `governed_tags` casam com a tag, no escopo da tabela ou de um ancestral | `collectors/protection.py` `evaluate_protection`; regra SEC-040 |
+| Detecções do Data Classification sem tag (só com grant; **nunca** lê `samples`) | SEC-041 |
+| Heurística de nome (email, cpf, phone, address…) **separada e rotulada**, severidade baixa, nunca alimenta a SEC-040 | SEC-042 |
+| Catálogos gerenciados sem configuração de Data Classification (API `data-classification/v1/catalogs/{c}/config`; "not found" = não habilitado) | GOV-036 |
+| Controle de compliance `DBX-SBP:DATA-1`; WAF `SCP-DATA-02` passou de atestação para medido | `compliance/frameworks`, `waf/catalogue` |
+| UI: painel "Proteção de dados sensíveis" (Security) e card "Higiene de tags" (Governance) | `SensitiveDataPanel.tsx`, `Governance.tsx` |
+
+Medido no workspace de demo:
+- Higiene: 20% das atribuições usam chave governada. `product` está em uso sem governança, enquanto a governed `Product` existe. O papel *domain* está em 3 chaves e *layer* em 2.
+- Proteção: 0 colunas com tag de sensibilidade, 265 candidatas pela heurística de nome, 6 máscaras diretas e 0 políticas ABAC visíveis. O Data Classification não está habilitado em nenhum dos 3 catálogos gerenciados.
+
+Limites honestos:
+- Políticas ABAC só aparecem onde o scan tem MANAGE; a contagem de políticas visíveis acompanha cada finding.
+- Tags de sensibilidade no nível da tabela ainda não entram na SEC-040, que é por coluna.

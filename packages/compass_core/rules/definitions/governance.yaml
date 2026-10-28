@@ -126,3 +126,67 @@ rules:
       boilerplate with column-specific meaning.
     docs:
       - https://docs.databricks.com/aws/en/comments/
+
+  - id: GOV-034
+    domain: governance
+    title: "Tag drift: the same concept is tagged several ways"
+    description: >
+      Tag keys in use that differ only by case or separators (Camada/camada),
+      an ungoverned key in use that is a variant of a governed key, a Tag
+      Profile role carried by several keys, or values of one role that differ
+      only by case (Gold/gold). Policies and ABAC conditions written against
+      one spelling miss the others. Databricks system tags are excluded.
+    severity: low
+    level: RECOMMENDED
+    requires: [tags, tag_policies]
+    frameworks: ["DBX-SBP:GOV-1"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      One concept should have one governed key and one spelling per value,
+      otherwise filters, scorecards and ABAC policies silently miss assets.
+    remediation: >
+      Choose the surviving governed key per concept, re-tag the variants, and
+      map the survivor in the Tag Profile.
+    docs:
+      - https://docs.databricks.com/aws/en/admin/governed-tags/
+
+  - id: GOV-035
+    domain: governance
+    title: Governed tags used with values outside their allowed list
+    description: >
+      Assignments of a governed key whose value is not in the tag policy's
+      allowed values — typically tags applied before the policy existed. ABAC
+      conditions on the allowed values do not match them.
+    severity: medium
+    level: RECOMMENDED
+    requires: [tags, tag_policies]
+    frameworks: ["DBX-SBP:GOV-1"]
+    waf_pillars: [data_ai_governance, security]
+    agent_explainer: >
+      A governed key with a value the policy does not allow is invisible to the
+      policies built on that key. Re-tag or extend the allowed list.
+    remediation: >
+      Re-tag the objects with an allowed value, or add the value to the tag
+      policy when it is legitimate.
+    docs:
+      - https://docs.databricks.com/aws/en/admin/governed-tags/manage-governed-tags
+
+  - id: GOV-036
+    domain: governance
+    title: Catalogs without Data Classification
+    description: >
+      Managed catalogs with no Data Classification configuration, so sensitive
+      columns are never detected or auto-tagged with class.* governed tags.
+    severity: low
+    level: RECOMMENDED
+    requires: [data_classification_config]
+    frameworks: ["DBX-SBP:DATA-1"]
+    waf_pillars: [data_ai_governance, security]
+    agent_explainer: >
+      Without classification, sensitive data is only protected where someone
+      remembered to tag it. Enable it on catalogs that hold business data.
+    remediation: >
+      Enable Data Classification per catalog (Catalog Explorer → Details →
+      Enable); scans are billed under the DATA_CLASSIFICATION billing origin.
+    docs:
+      - https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification

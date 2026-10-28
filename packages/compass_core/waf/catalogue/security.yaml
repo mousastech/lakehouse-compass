@@ -65,12 +65,25 @@ controls:
     principle: Data protection
     title: Row filters and column masks on sensitive tables
     provenance: waf-docs
-    measurability: attestation
+    measurability: system_table
     severity: medium
     criteria: PII/sensitive columns are protected by row filters or column masks.
+    rule: SEC-040
     remediation:
       summary: Add row-level filters and column masks to sensitive tables.
       doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/row-and-column-filters.html
+
+  - id: SCP-DATA-03
+    principle: Data protection
+    title: Sensitive data is discovered, not just remembered
+    provenance: extension
+    measurability: system_table
+    severity: low
+    criteria: Columns whose names suggest personal data are classified or tagged.
+    rule: SEC-042
+    remediation:
+      summary: Enable Data Classification and tag the confirmed sensitive columns.
+      doc_url: https://docs.databricks.com/aws/en/data-governance/unity-catalog/data-classification
 
   - id: SCP-APP-01
     principle: Application & AI security
