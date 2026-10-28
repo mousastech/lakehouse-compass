@@ -3,6 +3,7 @@ import { useLiveRows } from '../lib/analytics';
 import { toNum, toStr } from '../lib/rows';
 import { useT } from '../lib/i18n';
 import { scoreColorVar } from '../lib/domains';
+import { FillerRows, Pager, usePaged } from './Pager';
 
 const COMPONENTS = ['documentation', 'sensitivity', 'ownership', 'curation'] as const;
 
@@ -21,6 +22,7 @@ export function MetadataReadinessCard({ metrics, ws }: { metrics: Record<string,
       })) as ({ domain: string; tables: number; index: number } & Record<(typeof COMPONENTS)[number], number>)[],
     [domains.rows]
   );
+  const page = usePaged(rows, 8);
 
   if (!('metadata_readiness' in metrics)) return null;
   const index = metrics.metadata_readiness.value;
@@ -73,9 +75,9 @@ export function MetadataReadinessCard({ metrics, ws }: { metrics: Record<string,
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.domain || '__none'} className="border-b border-border/50">
-                  <td className={`px-3 py-2 ${r.domain ? 'text-card-foreground' : 'italic text-muted-foreground'}`}>{r.domain || t('gov.untagged')}</td>
+              {page.slice.map((r) => (
+                <tr key={r.domain || '__none'} className="h-10 border-b border-border/50">
+                  <td className={`max-w-[16rem] truncate px-3 py-2 ${r.domain ? 'text-card-foreground' : 'italic text-muted-foreground'}`} title={r.domain || undefined}>{r.domain || t('gov.untagged')}</td>
                   <td className="tnum px-3 py-2 text-right text-muted-foreground">{r.tables}</td>
                   <td className="tnum px-3 py-2 text-right font-medium" style={{ color: `var(${scoreColorVar(r.index)})` }}>{r.index}</td>
                   {COMPONENTS.map((c) => (
@@ -83,8 +85,10 @@ export function MetadataReadinessCard({ metrics, ws }: { metrics: Record<string,
                   ))}
                 </tr>
               ))}
+              <FillerRows count={page.filler} cols={2 + 1 + COMPONENTS.length} />
             </tbody>
           </table>
+          <Pager {...page} label={t('mr.title')} />
         </div>
       )}
     </section>

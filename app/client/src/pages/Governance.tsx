@@ -8,9 +8,11 @@ import { SourceBadge } from '../components/SourceBadge';
 import { FindingsList } from '../components/FindingsList';
 import { MetadataReadinessCard } from '../components/MetadataReadinessCard';
 import { DescriptionReviewPanel } from '../components/DescriptionReviewPanel';
+import { FillerRows, Pager, usePaged } from '../components/Pager';
 
 const WEAK_CLASSES = ['generic', 'echo', 'placeholder', 'short', 'boilerplate'] as const;
 const ROLES = ['domain', 'layer', 'owner'] as const;
+const PAGE_SIZE = 10;
 type Role = (typeof ROLES)[number];
 
 interface WeakExample { class: string; text: string; n: number; names: number }
@@ -117,6 +119,8 @@ export function Governance() {
       })),
     [inventory.rows]
   );
+  const rollupPage = usePaged(rollupRows, PAGE_SIZE, `${role}:${rollupRows.length}`);
+  const tagsPage = usePaged(tags, PAGE_SIZE);
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-5">
@@ -204,6 +208,11 @@ export function Governance() {
 
       <DescriptionReviewPanel ws={ws} />
 
+      {/* Reserve the space while these load, so the sections above don't jump. */}
+      {(rollup.loading || inventory.loading) && rollup.rows.length + tags.length === 0 && (
+        <div aria-hidden="true" className="h-64 animate-pulse rounded-xl border border-border bg-card/50" />
+      )}
+
       {rollup.rows.length > 0 && (
         <section className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-2.5">
@@ -238,12 +247,12 @@ export function Governance() {
                 </tr>
               </thead>
               <tbody>
-                {rollupRows.map((r) => {
+                {rollupPage.slice.map((r) => {
                   const useful = pct(r.columnsUseful, r.columns);
                   const untagged = r.value === '';
                   return (
-                    <tr key={r.value || '__untagged'} className="border-b border-border/50">
-                      <td className={`px-3 py-2 ${untagged ? 'italic text-muted-foreground' : 'text-card-foreground'}`}>
+                    <tr key={r.value || '__untagged'} className="h-10 border-b border-border/50">
+                      <td className={`max-w-[18rem] truncate px-3 py-2 ${untagged ? 'italic text-muted-foreground' : 'text-card-foreground'}`} title={untagged ? undefined : r.value}>
                         {untagged ? t('gov.untagged') : r.value}
                       </td>
                       <td className="tnum px-3 py-2 text-right text-muted-foreground">{r.tables}</td>
@@ -254,12 +263,14 @@ export function Governance() {
                     </tr>
                   );
                 })}
+                <FillerRows count={rollupPage.filler} cols={6} />
                 {rollupRows.length === 0 && (
                   <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">{t('gov.scorecard.none')}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          <Pager {...rollupPage} label={t('gov.scorecard.title')} />
         </section>
       )}
 
@@ -356,9 +367,9 @@ export function Governance() {
                 </tr>
               </thead>
               <tbody>
-                {tags.map((g) => (
-                  <tr key={g.key} className="border-b border-border/50 align-top">
-                    <td className="px-3 py-2 font-mono text-xs text-card-foreground">{g.key}</td>
+                {tagsPage.slice.map((g) => (
+                  <tr key={g.key} className="h-10 border-b border-border/50">
+                    <td className="max-w-[14rem] truncate px-3 py-2 font-mono text-xs text-card-foreground" title={g.key}>{g.key}</td>
                     <td className="px-3 py-2 text-xs">
                       {g.role ? (
                         <span className="rounded-full px-2 py-0.5" style={{ color: 'var(--domain-finops)', background: 'color-mix(in oklch, var(--domain-finops) 15%, transparent)' }}>
@@ -382,14 +393,16 @@ export function Governance() {
                     </td>
                     <td className="tnum px-3 py-2 text-right text-muted-foreground">{g.assignments}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{g.where.split(',').map((w) => t(`gov.securable.${w}`)).join(', ')}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
+                    <td className="max-w-[18rem] truncate px-3 py-2 text-xs text-muted-foreground" title={g.top.map((x) => `${x.v} (${x.n})`).join(' · ')}>
                       {g.top.map((x) => `${x.v} (${x.n})`).join(' · ')}
                     </td>
                   </tr>
                 ))}
+                <FillerRows count={tagsPage.filler} cols={6} />
               </tbody>
             </table>
           </div>
+          <Pager {...tagsPage} label={t('gov.tags.title')} />
         </section>
       )}
 

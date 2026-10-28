@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useT } from '../lib/i18n';
 import { toNum, toStr } from '../lib/rows';
+import { FillerRows, Pager, usePaged } from './Pager';
 
 interface Review {
   id: string;
@@ -24,6 +25,7 @@ interface EvalReport {
 }
 
 const VERDICT_VAR: Record<string, string> = { good: '--domain-finops', weak: '--sev-medium', poor: '--sev-high' };
+const PAGE_SIZE = 10;
 
 async function postJson(url: string, body: unknown): Promise<any> {
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -83,7 +85,8 @@ export function DescriptionReviewPanel({ ws }: { ws: string }) {
     for (const r of reviews) c[r.verdict] = (c[r.verdict] ?? 0) + 1;
     return c;
   }, [reviews]);
-  const visible = filter === 'all' ? reviews : reviews.filter((r) => r.verdict !== 'good');
+  const visible = useMemo(() => (filter === 'all' ? reviews : reviews.filter((r) => r.verdict !== 'good')), [filter, reviews]);
+  const paged = usePaged(visible, PAGE_SIZE, `${filter}:${reviews.length}`);
 
   const run = async (kind: 'review' | 'eval' | 'propose') => {
     setBusy(kind);
@@ -117,10 +120,10 @@ export function DescriptionReviewPanel({ ws }: { ws: string }) {
       return n;
     });
 
-  if (!loaded || !ws) return null;
+  if (!ws) return null;
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-6">
+    <section className="rounded-2xl border border-border bg-card p-6" aria-busy={!loaded}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl">
           <h2 className="text-sm font-semibold text-card-foreground">{t('mdr.title')}</h2>
@@ -213,29 +216,34 @@ export function DescriptionReviewPanel({ ws }: { ws: string }) {
                 </tr>
               </thead>
               <tbody>
-                {visible.slice(0, 150).map((r) => (
-                  <tr key={r.id} className="border-b border-border/50 align-top">
+                {paged.slice.map((r) => (
+                  <tr key={r.id} className="h-16 border-b border-border/50 align-top">
                     <td className="px-2 py-2">
                       {r.suggestion && (
                         <input type="checkbox" aria-label={`${t('mdr.select')} ${r.fq}`} checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-[11px] text-card-foreground">{r.fq}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">{r.comment}</td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="max-w-[16rem] px-3 py-2 font-mono text-[11px] text-card-foreground"><span className="line-clamp-2 break-all" title={r.fq}>{r.fq}</span></td>
+                    <td className="max-w-[16rem] px-3 py-2 text-xs text-muted-foreground"><span className="line-clamp-2" title={r.comment}>{r.comment}</span></td>
+                    <td className="max-w-[16rem] px-3 py-2 text-xs">
                       <span style={{ color: `var(${VERDICT_VAR[r.verdict] ?? '--sev-medium'})` }}>{t(`mdr.v.${r.verdict}`)}</span>{' '}
                       <span className="tnum text-muted-foreground">{r.score}</span>
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">{r.reason}</div>
+                      <div className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground" title={r.reason}>{r.reason}</div>
                     </td>
-                    <td className="px-3 py-2 text-xs text-card-foreground">{r.suggestion || <span className="text-muted-foreground">—</span>}</td>
+                    <td className="max-w-[20rem] px-3 py-2 text-xs text-card-foreground">
+                      {r.suggestion ? <span className="line-clamp-2" title={r.suggestion}>{r.suggestion}</span> : <span className="text-muted-foreground">—</span>}
+                    </td>
                   </tr>
                 ))}
+                <FillerRows count={paged.filler} cols={5} rowClass="h-16" />
               </tbody>
             </table>
           </div>
+          <Pager {...paged} label={t('mdr.title')} />
         </>
       )}
-      {reviews.length === 0 && <p className="mt-4 text-xs text-muted-foreground">{pending ? t('mdr.none') : t('mdr.noCandidates')}</p>}
+      {!loaded && <div className="mt-4 h-24 animate-pulse rounded-lg bg-muted/40" />}
+      {loaded && reviews.length === 0 && <p className="mt-4 text-xs text-muted-foreground">{pending ? t('mdr.none') : t('mdr.noCandidates')}</p>}
     </section>
   );
 }

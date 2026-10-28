@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLiveRows } from '../lib/analytics';
 import { toBool, toNum, toStr } from '../lib/rows';
 import { useT } from '../lib/i18n';
+import { FillerRows, Pager, usePaged } from './Pager';
 
 const PROTECTION_VAR: Record<string, string> = {
   direct_mask: '--domain-finops',
@@ -38,8 +39,10 @@ export function SensitiveDataPanel({ ws }: { ws: string }) {
       })),
     [cols.rows]
   );
-  const sensitive = rows.filter((r) => r.source !== 'name_heuristic');
-  const heuristic = rows.filter((r) => r.source === 'name_heuristic');
+  const sensitive = useMemo(() => rows.filter((r) => r.source !== 'name_heuristic'), [rows]);
+  const heuristic = useMemo(() => rows.filter((r) => r.source === 'name_heuristic'), [rows]);
+  const sensPage = usePaged(sensitive, 10);
+  const heurPage = usePaged(heuristic, 10, `${showHeuristic}:${heuristic.length}`);
   const catalogs = coverage.rows.map((r) => ({ name: toStr(r.catalog), enabled: r.enabled == null ? null : toBool(r.enabled) }));
 
   if (!('protection_sensitive_columns' in m)) return null;
@@ -104,9 +107,9 @@ export function SensitiveDataPanel({ ws }: { ws: string }) {
               </tr>
             </thead>
             <tbody>
-              {sensitive.slice(0, 50).map((r) => (
-                <tr key={r.fq} className="border-b border-border/50">
-                  <td className="px-3 py-2 font-mono text-xs text-card-foreground">{r.fq}</td>
+              {sensPage.slice.map((r) => (
+                <tr key={r.fq} className="h-10 border-b border-border/50">
+                  <td className="max-w-[22rem] truncate px-3 py-2 font-mono text-xs text-card-foreground" title={r.fq}>{r.fq}</td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{t(`prot.source.${r.source}`)}</td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.tag}</td>
                   <td className="px-3 py-2 text-xs" style={{ color: `var(${PROTECTION_VAR[r.protection] ?? '--sev-medium'})` }} title={r.by}>
@@ -114,8 +117,10 @@ export function SensitiveDataPanel({ ws }: { ws: string }) {
                   </td>
                 </tr>
               ))}
+              <FillerRows count={sensPage.filler} cols={4} />
             </tbody>
           </table>
+          <Pager {...sensPage} label={t('prot.title')} />
         </div>
       )}
 
@@ -131,14 +136,22 @@ export function SensitiveDataPanel({ ws }: { ws: string }) {
           </button>
           <p className="mt-1 text-xs text-muted-foreground">{t('prot.heuristicHelp')}</p>
           {showHeuristic && (
-            <ul className="mt-2 max-h-72 divide-y divide-border/50 overflow-y-auto rounded-lg border border-border/60">
-              {heuristic.slice(0, 200).map((r) => (
-                <li key={r.fq} className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs">
-                  <span className="truncate font-mono text-card-foreground" title={r.fq}>{r.fq}</span>
-                  <span className="shrink-0 text-muted-foreground">{r.tag}</span>
-                </li>
-              ))}
-            </ul>
+            <>
+              {/* Paged, not a nested scroll box: an inner scroller inside the scrolling
+                  content pane swallows the wheel and makes the page feel stuck. */}
+              <ul className="mt-2 divide-y divide-border/50 rounded-lg border border-border/60">
+                {heurPage.slice.map((r) => (
+                  <li key={r.fq} className="flex h-8 items-center justify-between gap-3 px-3 text-xs">
+                    <span className="truncate font-mono text-card-foreground" title={r.fq}>{r.fq}</span>
+                    <span className="shrink-0 text-muted-foreground">{r.tag}</span>
+                  </li>
+                ))}
+                {Array.from({ length: heurPage.filler }, (_, i) => (
+                  <li key={`filler-${i}`} aria-hidden="true" className="h-8" />
+                ))}
+              </ul>
+              <Pager {...heurPage} label={t('prot.heuristicTitle')} />
+            </>
           )}
         </div>
       )}
