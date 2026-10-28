@@ -24,7 +24,6 @@ import {
   usageSummaryRows,
   usageHeatmapRows,
   usageActiveUsersTrendRows,
-  reliabilitySummaryRows,
   wafScoresRows,
   wafControlsRows,
   digestsRows,
@@ -88,7 +87,6 @@ export function setupApiRoutes(appkit: AppKitServer): void {
     app.get('/api/rows/usage_summary', (_req, res) => res.json(usageSummaryRows));
     app.get('/api/rows/usage_heatmap', (_req, res) => res.json(usageHeatmapRows));
     app.get('/api/rows/usage_active_users_trend', (_req, res) => res.json(usageActiveUsersTrendRows));
-    app.get('/api/rows/reliability_summary', (_req, res) => res.json(reliabilitySummaryRows));
     app.get('/api/rows/genie_readiness', (_req, res) => res.json(genieReadinessRows));
     app.get('/api/rows/genie_readiness_pillars', (_req, res) => res.json(genieReadinessPillarsRows));
     app.get('/api/rows/genie_cost_summary', (_req, res) => res.json(genieCostSummaryRows));

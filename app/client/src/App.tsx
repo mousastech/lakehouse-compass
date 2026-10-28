@@ -1,5 +1,5 @@
 import { useState, useEffect, type ComponentType } from 'react';
-import { createBrowserRouter, RouterProvider, NavLink, Outlet } from 'react-router';
+import { createBrowserRouter, RouterProvider, NavLink, Navigate, Outlet } from 'react-router';
 import {
   LayoutDashboard,
   ShieldCheck,
@@ -10,7 +10,6 @@ import {
   Users,
   Sparkles,
   Database,
-  Activity,
   Compass,
   Megaphone,
   ClipboardCheck,
@@ -49,7 +48,6 @@ import { GenieReadiness } from './pages/GenieReadiness';
 import { Lakebase } from './pages/Lakebase';
 import { Performance } from './pages/Performance';
 import { Usage } from './pages/Usage';
-import { Reliability } from './pages/Reliability';
 import { Waf } from './pages/Waf';
 import { Digest } from './pages/Digest';
 import { History } from './pages/History';
@@ -84,7 +82,6 @@ const SECTIONS: NavSection[] = [
       { to: '/usage', tKey: 'nav.usage', icon: Users },
       { to: '/genie', tKey: 'nav.genie', icon: Sparkles },
       { to: '/lakebase', tKey: 'nav.lakebase', icon: Database },
-      { to: '/reliability', tKey: 'nav.reliability', icon: Activity },
     ],
   },
   {
@@ -320,7 +317,8 @@ const router = createBrowserRouter([
       { path: '/genie', element: <Genie /> },
       { path: '/genie-readiness', element: <GenieReadiness /> },
       { path: '/lakebase', element: <Lakebase /> },
-      { path: '/reliability', element: <Reliability /> },
+      // Reliability has no screen of its own; its findings live in Findings.
+      { path: '/reliability', element: <Navigate to="/findings?domain=reliability" replace /> },
       { path: '/waf', element: <Waf /> },
       { path: '/compliance', element: <Compliance /> },
       { path: '/maintenance', element: <Maintenance /> },

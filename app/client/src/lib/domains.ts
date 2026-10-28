@@ -23,7 +23,7 @@ export const DOMAIN_PATH: Record<DomainId, string> = {
   genie: '/genie',
   genie_readiness: '/genie-readiness',
   lakebase: '/lakebase',
-  reliability: '/reliability',
+  reliability: '/findings?domain=reliability', // no dedicated screen
 };
 
 export const SEVERITY_VAR: Record<Severity, string> = {

@@ -261,9 +261,6 @@ export const usageHeatmapRows = (() => {
   return out;
 })();
 
-export const reliabilitySummaryRows = [
-  { total_runs: 27, errors: 11, succeeded: 15, failure_rate_pct: 40.7, workspace_id: '7474658545709121' },
-];
 
 export const maintenanceRows = [
   { id: 'M-2001', sourceRule: 'MNT-002', resource: 'sp: prod-etl OAuth secret', owner: 'platform@demo', dueAt: isoInDays(3), recurrence: 'on-expiry', status: 'due' },

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Wifi, WifiOff } from 'lucide-react';
 import { useLiveRows } from '../lib/analytics';
 import { useWorkspace } from '../lib/workspace';
@@ -19,7 +20,9 @@ export function Findings() {
   const findings = useMemo(() => rows.map(normFinding), [rows]);
 
   const [q, setQ] = useState('');
-  const [domain, setDomain] = useState<string>('');
+  // ?domain= preselects the filter (domain cards without a screen of their own link here).
+  const [params] = useSearchParams();
+  const [domain, setDomain] = useState<string>(params.get('domain') ?? '');
   const [sev, setSev] = useState<string>('');
   const [selected, setSelected] = useState<FindingRow | null>(null);
 
