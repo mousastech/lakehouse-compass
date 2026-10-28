@@ -270,6 +270,8 @@ _APP_TABLES = {
         "comment_hash STRING, comment STRING, verdict STRING, specificity INT, business_semantics INT, "
         "plausibility INT, genie_usefulness INT, score DOUBLE, reason STRING, suggestion STRING, model STRING, "
         "prompt_version STRING, reviewed_by STRING, reviewed_at STRING"),
+    # Compass administrators — append-only log; latest action per email wins.
+    "app_admins": "email STRING, action STRING, actor STRING, at STRING",
     "proposed_changes": (
         "change_id STRING, finding_id STRING, rule_id STRING, workspace_id STRING, title STRING, steps STRING, "
         "code STRING, rollback STRING, blast_radius STRING, confidence STRING, status STRING, created_by STRING, "
@@ -278,8 +280,9 @@ _APP_TABLES = {
 
 
 def _ensure_app_tables(spark, fq: str, app_sp: str) -> None:
-    """Create the app-written tables if missing and grant the app SP exactly
-    SELECT + MODIFY on them (least privilege: nothing else in the schema)."""
+    """Create the app-written tables (LLM reviews, proposed changes, admins) if
+    missing and grant the app SP exactly SELECT + MODIFY on them (least
+    privilege: nothing else in the schema)."""
     for name, cols in _APP_TABLES.items():
         try:
             spark.sql(f"CREATE TABLE IF NOT EXISTS {fq}.{name} ({cols})")

@@ -1,6 +1,7 @@
 import type { Application, Request, Response } from 'express';
-import { invokeLlm, runSql, getGovernance, getSpToken, normHost } from '../lib/dbx';
+import { invokeLlm, runSql, getGovernance } from '../lib/dbx';
 import { TOOL_SPECS, executeTool, buildRemediationPlan, draftChange } from './tools';
+import { isAdmin } from '../lib/admins';
 
 interface AppKitServer {
   server: { extend(fn: (app: Application) => void): void };
@@ -23,22 +24,6 @@ Rules you must always follow:
 
 export function userEmail(req: Request): string {
   return (req.header('x-forwarded-email') || req.header('x-forwarded-user') || 'app-user').toString();
-}
-
-// Verify the acting user holds CAN MANAGE on the Compass app (Apps permissions API).
-export async function userCanManage(email: string): Promise<boolean> {
-  try {
-    const host = normHost();
-    const token = await getSpToken(host);
-    const r = await fetch(`${host}/api/2.0/permissions/apps/lakehouse-compass`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) return false;
-    const d = (await r.json()) as { access_control_list?: { user_name?: string; all_permissions?: { permission_level?: string }[] }[] };
-    return (d.access_control_list || []).some(
-      (a) => a.user_name === email && (a.all_permissions || []).some((p) => p.permission_level === 'CAN_MANAGE')
-    );
-  } catch {
-    return false;
-  }
 }
 
 export function setupAgentRoutes(appkit: AppKitServer): void {
@@ -106,8 +91,8 @@ export function setupAgentRoutes(appkit: AppKitServer): void {
           return;
         }
         const acting = userEmail(req);
-        if (!(await userCanManage(acting))) {
-          res.status(403).json({ error: `Reviewer must hold CAN MANAGE on the Compass app. ${acting} does not — ask an app manager to grant it, then retry.` });
+        if (!(await isAdmin(acting))) {
+          res.status(403).json({ error: `Only Compass administrators can approve or reject changes. ${acting} is not one — ask an administrator to add you in Settings.` });
           return;
         }
         const who = acting.replace(/'/g, "''");

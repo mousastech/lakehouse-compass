@@ -1,7 +1,8 @@
 import type { Application, Request, Response } from 'express';
 import { runSql, type SqlParam } from '../lib/dbx';
 import { CAT } from '../catalog';
-import { userCanManage, userEmail } from '../agent/agent-routes';
+import { userEmail } from '../agent/agent-routes';
+import { isAdmin } from '../lib/admins';
 import { PROMPT_VERSION, judgeAll, runEval, type JudgeItem } from '../metadata/judge';
 
 interface AppKitServer {
@@ -29,8 +30,8 @@ function sqlLiteral(s: string): string {
 
 async function requireManager(req: Request, res: Response): Promise<boolean> {
   const who = userEmail(req);
-  if (await userCanManage(who)) return true;
-  res.status(403).json({ error: `Running the LLM review needs CAN MANAGE on the Compass app (it spends tokens on the governed endpoint). ${who} does not have it.` });
+  if (await isAdmin(who)) return true;
+  res.status(403).json({ error: `Running the LLM review is limited to Compass administrators (it spends tokens on the governed endpoint). ${who} is not one — ask an administrator to add you in Settings.` });
   return false;
 }
 

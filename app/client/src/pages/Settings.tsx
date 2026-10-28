@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Settings as SettingsIcon, Save } from 'lucide-react';
 import { useT } from '../lib/i18n';
+import { AdminsCard } from '../components/AdminsCard';
 import {
   loadSettings,
   saveSettings,
@@ -49,6 +50,8 @@ export function Settings() {
         <h1 className="text-xl font-semibold text-foreground">{t('nav.settings')}</h1>
       </div>
       <p className="text-sm text-muted-foreground">{t('settings.note')}</p>
+
+      <AdminsCard />
 
       <section className="rounded-xl border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold text-card-foreground">{t('settings.policyProfile')}</h2>
