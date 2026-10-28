@@ -17,7 +17,9 @@ function pct(n: number, d: number): number {
   return d ? Math.round((1000 * n) / d) / 10 : 0;
 }
 
+// AppKit already parses JSON-looking string columns; fixtures send raw strings.
 function parseJson<T>(v: unknown, fallback: T): T {
+  if (v != null && typeof v === 'object') return v as T;
   try {
     return (JSON.parse(toStr(v)) as T) ?? fallback;
   } catch {
@@ -50,8 +52,8 @@ export function Governance() {
   const [role, setRole] = useState<Role>('domain');
 
   const m = useMemo(() => {
-    const map: Record<string, { value: number; detail: string }> = {};
-    for (const r of metrics.rows) map[toStr(r.metric)] = { value: toNum(r.value), detail: toStr(r.detail) };
+    const map: Record<string, { value: number; detail: string; raw: unknown }> = {};
+    for (const r of metrics.rows) map[toStr(r.metric)] = { value: toNum(r.value), detail: toStr(r.detail), raw: r.detail };
     return map;
   }, [metrics.rows]);
   const v = (k: string) => m[k]?.value ?? 0;
@@ -69,7 +71,7 @@ export function Governance() {
     return { scope: s, useful, weak, missing, total: v(`${s}_total`), documentedPct: v(`${s}_documented_pct`), usefulPct: v(`${s}_useful_pct`) };
   });
   const weakByClass = WEAK_CLASSES.map((q) => ({ q, n: v(`column_q_${q}`) })).filter((x) => x.n > 0);
-  const examples = parseJson<WeakExample[]>(m['weak_comment_examples']?.detail, []);
+  const examples = parseJson<WeakExample[]>(m['weak_comment_examples']?.raw, []);
 
   const rollupRows = useMemo(
     () =>
