@@ -50,6 +50,8 @@ def parse_args() -> argparse.Namespace:
                    help="Scan every billing-active workspace (capped by --max_workspaces).")
     p.add_argument("--max_workspaces", type=int, default=25,
                    help="Cap when scanning all workspaces, so discovery of thousands never runs unbounded.")
+    p.add_argument("--tag_profile_json", default="",
+                   help="JSON extending the default Tag Profile (compass_core/tag_profile.yaml); lists are unioned.")
     known, _ = p.parse_known_args()
     return known
 
@@ -187,6 +189,17 @@ def _schemas():
             S("level", LongType()), S("level_label"), S("available", BooleanType()),
             S("unavailable_reason"), S("signals_json"), S("gaps_json"), S("metrics_json"),
         ]),
+        "tag_rollup": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("role"), S("value"),
+            S("tables", LongType()), S("tables_useful", LongType()), S("columns", LongType()),
+            S("columns_useful", LongType()), S("certified", LongType()), S("deprecated", LongType()),
+            S("with_owner", LongType()), S("gold", LongType()), S("sensitive", LongType()),
+        ]),
+        "tag_inventory": StructType([
+            S("scan_id"), S("workspace_id"), S("workspace_name"), S("tag_key"), S("role"), S("suggested_role"),
+            S("governed", BooleanType()), S("securable_types"), S("assignments", LongType()),
+            S("distinct_values", LongType()), S("top_values_json"),
+        ]),
         "genie_cost_summary": StructType([
             S("scan_id"), S("workspace_id"), S("workspace_name"), S("window_days", LongType()),
             S("billed_cost_usd", DoubleType()), S("billed_dbus", DoubleType()),
@@ -300,8 +313,10 @@ def run_live(args) -> None:
         FinOpsCollector, SecurityCollector, AiEstateCollector, GovernanceCollector,
         PerformanceCollector, UsageCollector, ReliabilityCollector,
         GenieCollector, GenieCostCollector, LakebaseCollector, GenieReadinessCollector,
+        MetadataCollector,
     )
     from compass_core.collectors.base import cap
+    from compass_core.tag_profile import load_tag_profile
     from compass_core.capabilities.manager import PROBES
     from compass_core.compliance import ComplianceMapper, load_framework
     from compass_core.models.capability import Availability
@@ -384,6 +399,7 @@ def run_live(args) -> None:
     # WAF Phase 2: control catalogue loaded once; per-workspace assessment uses the
     # scan's open findings + usable capabilities to mark each control measured/gap/pass.
     waf_catalogue = load_controls()
+    tag_profile = load_tag_profile(args.tag_profile_json)
     known_rule_ids = {r.id for r in registry.all()}
     rule_requires = {r.id: list(r.requires) for r in registry.all()}
 
@@ -452,7 +468,20 @@ def run_live(args) -> None:
         lakebase_inventory: list = []
         genie_readiness: list = []
         genie_readiness_pillars: list = []
+        tag_rollup: list = []
+        tag_inventory: list = []
         if is_local:
+            # Tag-based monitoring + description quality — metastore-wide UC metadata, so
+            # (like the readiness UC pillars) it runs once, for the local workspace.
+            md = MetadataCollector(tag_profile, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name,
+                                   rest=rest).collect(spark)
+            findings += md.findings
+            capabilities += md.capabilities
+            gov_metrics = gov_metrics + md.inventory.get("governance_metrics", [])
+            tag_rollup = md.inventory.get("tag_rollup", [])
+            tag_inventory = md.inventory.get("tag_inventory", [])
+            md_quality = {r["metric"]: r["value"] for r in md.inventory.get("governance_metrics", [])}
+
             gen = GenieCollector(rest, workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect()
             findings += gen.findings
             capabilities += gen.capabilities
@@ -466,7 +495,8 @@ def run_live(args) -> None:
 
             # Genie Ontology Readiness — UC-metadata pillars are metastore-wide;
             # genie/adoption pillars are scoped to this (local) workspace's audit.
-            gr = GenieReadinessCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name).collect(spark)
+            gr = GenieReadinessCollector(workspace_id=ws, scan_id=scan_id, workspace_name=ws_name,
+                                         profile=tag_profile, quality=md_quality).collect(spark)
             findings += gr.findings
             capabilities += gr.capabilities
             genie_readiness = gr.inventory.get("genie_readiness", [])
@@ -612,6 +642,10 @@ def run_live(args) -> None:
             _write(spark, fq, "genie_readiness", genie_readiness)
         if genie_readiness_pillars:
             _write(spark, fq, "genie_readiness_pillars", genie_readiness_pillars)
+        if tag_rollup:
+            _write(spark, fq, "tag_rollup", tag_rollup)
+        if tag_inventory:
+            _write(spark, fq, "tag_inventory", tag_inventory)
         if genie_cost_summary:
             _write(spark, fq, "genie_cost_summary", genie_cost_summary)
         if genie_cost_by_user:

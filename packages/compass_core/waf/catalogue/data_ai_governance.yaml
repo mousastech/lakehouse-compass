@@ -26,6 +26,54 @@ controls:
       summary: Define a tag taxonomy and apply governed tags to eligible assets.
       doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/tags.html
 
+  - id: DG-META-03
+    principle: Metadata & discoverability
+    title: Descriptions carry meaning
+    provenance: extension
+    measurability: system_table
+    severity: medium
+    criteria: Column comments on curated assets are not generic, placeholders, name echoes or boilerplate.
+    rule: GOV-040
+    remediation:
+      summary: Rewrite weak comments with meaning, unit, grain and business rule — gold columns first.
+      doc_url: https://docs.databricks.com/aws/en/comments/
+
+  - id: DG-OWN-01
+    principle: Ownership & stewardship
+    title: Curated assets have an owner
+    provenance: extension
+    measurability: system_table
+    severity: medium
+    criteria: Every gold-layer table carries an owner/steward tag (directly or from its schema).
+    rule: GOV-030
+    remediation:
+      summary: Tag gold tables or their schemas with the accountable owner/steward.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/tags.html
+
+  - id: DG-OWN-02
+    principle: Ownership & stewardship
+    title: Each domain has a steward
+    provenance: extension
+    measurability: system_table
+    severity: low
+    criteria: Every business domain has at least one owner/steward-tagged asset.
+    rule: GOV-033
+    remediation:
+      summary: Name a steward per domain and tag the domain's schemas.
+      doc_url: https://docs.databricks.com/en/data-governance/unity-catalog/tags.html
+
+  - id: DG-CERT-01
+    principle: Metadata & discoverability
+    title: Canonical gold tables are certified
+    provenance: extension
+    measurability: system_table
+    severity: low
+    criteria: Gold-layer tables are certified with system.certification_status.
+    rule: GOV-031
+    remediation:
+      summary: Certify canonical gold tables; mark retired ones deprecated.
+      doc_url: https://docs.databricks.com/aws/en/admin/governed-tags/
+
   - id: DG-AI-01
     principle: AI governance
     title: Genie Agents are curated

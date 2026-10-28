@@ -1,0 +1,40 @@
+# Tag Profile — maps semantic roles to the tag keys an organisation actually uses.
+#
+# Compass never assumes a single naming convention: every collector that reasons
+# about domains, layers, ownership, certification or sensitivity resolves keys
+# through this profile. Matching is case-insensitive. Tags set on a catalog or
+# schema are inherited by its tables (the most specific assignment wins), except
+# for the roles in `inherit_exclude`.
+#
+# This default is generic (en / pt / es). Deployments extend it without editing
+# the repo by passing JSON with the same shape to the scan job
+# (`--tag_profile_json`, wired to the bundle var `tag_profile_json`); lists are
+# unioned with the defaults.
+roles:
+  domain:
+    keys: [domain, data_domain, business_domain, subject_area, data_product,
+           dominio, dominio_negocio, area_negocio, dominio_datos, area_negocio_datos]
+  layer:
+    keys: [layer, data_layer, medallion, medallion_layer, tier, camada, capa]
+  owner:
+    keys: [owner, data_owner, steward, data_steward, responsavel, responsable,
+           propietario, dono]
+  certification:
+    keys: [system.certification_status, certification_status, certification,
+           certificado, certificacao, certificacion]
+    certified_values: [certified, certificado, sim, si, yes, "true"]
+    deprecated_values: [deprecated, obsoleto, descontinuado]
+  sensitivity:
+    keys: [sensitivity, data_sensitivity, classification, data_classification,
+           confidentiality, pii, phi, sensibilidade, sensibilidad]
+    # System governed tags applied by Data Classification / SAP sync.
+    prefixes: [class., sap.PersonalData.]
+  cost_center:
+    keys: [cost_center, costcenter, team, business_unit, centro_custo, centro_costo]
+
+# Roles NOT inherited from a catalog/schema tag: certification is an assertion
+# about one asset, so a certified catalog must not certify every table in it.
+inherit_exclude: [certification]
+
+# Layer values treated as the curated/consumption layer (gold-scoped rules).
+gold_values: [gold, ouro, oro, curated, consumption, serving]

@@ -24,11 +24,13 @@ rules:
     domain: governance
     title: Governed tags defined but never applied
     description: >
-      Governed tag policies that are defined but applied to few or no objects
-      indicate a governance boundary that is not actually in force.
+      Governed tag policies (excluding Databricks system tags) that are not
+      applied to any object in the catalogs the scan can read indicate a
+      governance boundary that is not actually in force. Governed tags are
+      account-level, so shared accounts inflate the count.
     severity: medium
     level: RECOMMENDED
-    requires: [tags]
+    requires: [tags, tag_policies]
     frameworks: ["DBX-SBP:GOV-1"]
     waf_pillars: [data_ai_governance]
     agent_explainer: >
@@ -39,3 +41,88 @@ rules:
       policies.
     docs:
       - https://docs.databricks.com/data-governance/unity-catalog/tags.html
+
+  - id: GOV-030
+    domain: governance
+    title: Gold tables without an owner/steward tag
+    description: >
+      Tables in the curated (gold) layer — resolved through the Tag Profile, with
+      catalog/schema tags inherited — that carry no owner or steward tag. Nobody
+      is accountable for the assets users and Genie are meant to trust.
+    severity: medium
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      Gold tables need a named owner. Tag the table or its schema with the owner
+      or steward so questions and incidents have somewhere to go.
+    remediation: >
+      Apply an owner/steward tag (any key mapped to the owner role in the Tag
+      Profile) to each gold table or its schema.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/tags.html
+
+  - id: GOV-031
+    domain: governance
+    title: Gold tables not certified
+    description: >
+      Gold-layer tables without a certification tag on the table itself
+      (system.certification_status = certified, or a mapped equivalent).
+      Certification is not inherited from the catalog or schema.
+    severity: low
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Certified tables tell users and Genie which source is canonical. Certify the
+      gold tables that are meant to be the source of truth.
+    remediation: >
+      Set system.certification_status = certified on canonical gold tables and
+      deprecated on the ones being retired.
+    docs:
+      - https://docs.databricks.com/aws/en/admin/governed-tags/
+
+  - id: GOV-033
+    domain: governance
+    title: Domains without a named owner/steward
+    description: >
+      Business domains (domain-role tag values) where no table carries an owner
+      or steward tag, directly or inherited.
+    severity: low
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance]
+    agent_explainer: >
+      A domain without a steward has no one deciding its definitions and quality
+      bar. Name one per domain.
+    remediation: >
+      Tag at least each domain's schemas with an owner/steward.
+    docs:
+      - https://docs.databricks.com/data-governance/unity-catalog/tags.html
+
+  - id: GOV-040
+    domain: governance
+    title: Generic or empty-of-meaning descriptions
+    description: >
+      Column comments that exist but say nothing: they repeat the column name,
+      are placeholders (TBD, n/a), generic phrases ("Name of the column"), too
+      short, or the same boilerplate reused across different columns. Scoped to
+      gold tables when the layer is tagged, otherwise all tables. Fires when at
+      least 10% of the documented columns are weak.
+    severity: medium
+    level: RECOMMENDED
+    requires: [tags]
+    frameworks: ["DBX-SBP:GOV-2"]
+    waf_pillars: [data_ai_governance, interoperability_usability]
+    agent_explainer: >
+      Having a description is not the same as having a useful one. Genie and
+      analysts need meaning, unit, grain and business rules — not the column
+      name restated.
+    remediation: >
+      Rewrite weak comments on the most-used gold columns first; replace
+      boilerplate with column-specific meaning.
+    docs:
+      - https://docs.databricks.com/aws/en/comments/

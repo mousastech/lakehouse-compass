@@ -118,6 +118,53 @@ export const governanceMetricsRows = [
   { metric: 'comment_coverage_pct', value: 35.5, detail: 'moi_ai_catalog' },
   { metric: 'tables_total', value: 172, detail: 'moi_ai_catalog' },
   { metric: 'tables_undocumented', value: 111, detail: 'moi_ai_catalog' },
+  // Description quality (metadata collector) — every comment classified by SQL heuristics.
+  { metric: 'column_total', value: 15460, detail: 'all user catalogs' },
+  { metric: 'column_documented_pct', value: 6.1, detail: '' },
+  { metric: 'column_useful_pct', value: 5.7, detail: '' },
+  { metric: 'column_q_useful', value: 876, detail: '' },
+  { metric: 'column_q_missing', value: 14510, detail: '' },
+  { metric: 'column_q_placeholder', value: 0, detail: '' },
+  { metric: 'column_q_echo', value: 3, detail: '' },
+  { metric: 'column_q_generic', value: 6, detail: '' },
+  { metric: 'column_q_short', value: 12, detail: '' },
+  { metric: 'column_q_boilerplate', value: 53, detail: '' },
+  { metric: 'table_total', value: 1213, detail: 'all user catalogs' },
+  { metric: 'table_documented_pct', value: 33.6, detail: '' },
+  { metric: 'table_useful_pct', value: 32.8, detail: '' },
+  { metric: 'table_q_useful', value: 398, detail: '' },
+  { metric: 'table_q_missing', value: 805, detail: '' },
+  { metric: 'table_q_boilerplate', value: 10, detail: '' },
+  {
+    metric: 'weak_comment_examples',
+    value: 3,
+    detail: JSON.stringify([
+      { class: 'boilerplate', text: 'PASS or FAIL', n: 7, names: 4 },
+      { class: 'generic', text: 'Name of the column.', n: 6, names: 3 },
+      { class: 'boilerplate', text: 'Schema containing the table.', n: 5, names: 3 },
+    ]),
+  },
+];
+
+// Scorecard by tag role (mirrors moi_ai_catalog.lakehouse_compass.tag_rollup). value '' = untagged.
+export const tagRollupRows = [
+  { role: 'domain', value: '', tables: 1179, tables_useful: 392, columns: 14992, columns_useful: 815, certified: 0, deprecated: 0, with_owner: 0, gold: 0, sensitive: 0 },
+  { role: 'domain', value: 'Seguros MetLife', tables: 29, tables_useful: 5, columns: 362, columns_useful: 18, certified: 3, deprecated: 0, with_owner: 0, gold: 22, sensitive: 0 },
+  { role: 'domain', value: 'Arrecadacao', tables: 2, tables_useful: 0, columns: 25, columns_useful: 0, certified: 0, deprecated: 0, with_owner: 0, gold: 1, sensitive: 0 },
+  { role: 'domain', value: 'supply_chain', tables: 1, tables_useful: 1, columns: 43, columns_useful: 43, certified: 0, deprecated: 0, with_owner: 0, gold: 1, sensitive: 0 },
+  { role: 'layer', value: '', tables: 1188, tables_useful: 395, columns: 15099, columns_useful: 827, certified: 1, deprecated: 0, with_owner: 0, gold: 0, sensitive: 0 },
+  { role: 'layer', value: 'gold', tables: 25, tables_useful: 3, columns: 361, columns_useful: 49, certified: 2, deprecated: 0, with_owner: 0, gold: 25, sensitive: 0 },
+  { role: 'owner', value: '', tables: 1213, tables_useful: 398, columns: 15460, columns_useful: 876, certified: 3, deprecated: 0, with_owner: 0, gold: 25, sensitive: 0 },
+];
+
+// Tag keys in use (mirrors moi_ai_catalog.lakehouse_compass.tag_inventory).
+export const tagInventoryRows = [
+  { tag_key: 'dominio_negocio', role: 'domain', suggested_role: '', governed: false, securable_types: 'schema,table', assignments: 11, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'Seguros MetLife', n: 11 }]) },
+  { tag_key: 'accelerator', role: '', suggested_role: '', governed: false, securable_types: 'schema,table', assignments: 7, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'pixels', n: 7 }]) },
+  { tag_key: 'camada', role: 'layer', suggested_role: '', governed: true, securable_types: 'schema,table', assignments: 6, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'gold', n: 6 }]) },
+  { tag_key: 'certificado', role: 'certification', suggested_role: '', governed: false, securable_types: 'schema,table', assignments: 5, distinct_values: 2, top_values_json: JSON.stringify([{ v: 'sim', n: 3 }, { v: 'workshop', n: 2 }]) },
+  { tag_key: 'phi', role: 'sensitivity', suggested_role: '', governed: true, securable_types: 'table', assignments: 1, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'false', n: 1 }]) },
+  { tag_key: 'gov_data_domain', role: '', suggested_role: 'domain', governed: true, securable_types: 'table', assignments: 1, distinct_values: 1, top_values_json: JSON.stringify([{ v: 'finance', n: 1 }]) },
 ];
 
 export const perfSummaryRows = [

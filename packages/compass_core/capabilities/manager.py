@@ -30,7 +30,8 @@ PROBES: dict[str, dict[str, str]] = {
     "genie": {"kind": "api", "source": "genie_api", "scope": "workspace"},
     "lakebase": {"kind": "pg_introspection", "source": "pg_roles/pg_stat", "scope": "project"},
     "mcp_catalog": {"kind": "api", "source": "mcp_catalog", "scope": "account"},
-    "data_classification": {"kind": "system_table", "source": "system.information_schema", "scope": "catalog"},
+    "tag_policies": {"kind": "api", "source": "tag_policies_api", "scope": "account"},
+    "data_classification": {"kind": "system_table", "source": "system.data_classification.results", "scope": "account"},
     "sat": {"kind": "delta", "source": "security_analysis.results", "scope": "account"},
 }
 
@@ -48,7 +49,8 @@ _DEMO_AVAILABILITY: dict[str, Availability] = {
     "genie": Availability.AVAILABLE,
     "lakebase": Availability.DEGRADED,  # needs read-only role granted
     "mcp_catalog": Availability.NOT_AVAILABLE,  # preview / not enabled
-    "data_classification": Availability.AVAILABLE,
+    "tag_policies": Availability.AVAILABLE,
+    "data_classification": Availability.NOT_AVAILABLE,  # account-admin grant by default
     "sat": Availability.NOT_AVAILABLE,  # customer must run SAT
 }
 

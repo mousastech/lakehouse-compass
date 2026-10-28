@@ -29,6 +29,9 @@ variables:
   compass_llm_endpoint:
     description: Serving endpoint bound to the Compass Agent (compass-llm). Must exist in the target workspace.
     default: databricks-claude-sonnet-4-5
+  tag_profile_json:
+    description: Optional JSON extending the default Tag Profile (packages/compass_core/tag_profile.yaml) with this deployment's tag keys, e.g. {"roles":{"domain":{"keys":["bu"]}}}. Set it in the target's local config.
+    default: ""
 
 targets:
   # dev is the default target for Phase 0 work.
